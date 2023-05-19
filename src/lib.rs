@@ -149,6 +149,6 @@ pub mod calendar {
         for date in delivery_dates {
             my_calendar.push(delivery_date_to_event(date));
         }
-        format!("{my_calendar}")
+        my_calendar.to_string()
     }
 }
