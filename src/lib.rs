@@ -76,14 +76,8 @@ pub mod bring_client {
         impl Endpoint {
             pub fn new(api_key: &str, api_uid: &str) -> Self {
                 let mut headers = HeaderMap::new();
-                headers.insert(
-                    "X-Mybring-API-Uid",
-                    HeaderValue::from_str(api_uid).unwrap(),
-                );
-                headers.insert(
-                    "X-Mybring-API-Key",
-                    HeaderValue::from_str(api_key).unwrap(),
-                );
+                headers.insert("X-Mybring-API-Uid", HeaderValue::from_str(api_uid).unwrap());
+                headers.insert("X-Mybring-API-Key", HeaderValue::from_str(api_key).unwrap());
                 let client = Client::builder().default_headers(headers).build().unwrap();
                 Self { client }
             }
