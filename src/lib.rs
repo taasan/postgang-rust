@@ -101,19 +101,19 @@ pub mod bring_client {
 
 pub mod calendar {
     use crate::DeliveryDate;
-    use chrono::{Datelike, Duration};
+    use chrono::{Datelike, Duration, Weekday::*};
     use icalendar::{Calendar, Component, Event, EventLike, Property};
 
     pub fn delivery_date_to_event(delivery_date: DeliveryDate) -> Event {
         let date = delivery_date.date;
         let weekday = match date.weekday() {
-            chrono::Weekday::Mon => "mandag",
-            chrono::Weekday::Tue => "tirsdag",
-            chrono::Weekday::Wed => "onsdag",
-            chrono::Weekday::Thu => "torsdag",
-            chrono::Weekday::Fri => "fredag",
-            chrono::Weekday::Sat => "lørdag",
-            chrono::Weekday::Sun => "søndag",
+            Mon => "mandag",
+            Tue => "tirsdag",
+            Wed => "onsdag",
+            Thu => "torsdag",
+            Fri => "fredag",
+            Sat => "lørdag",
+            Sun => "søndag",
         };
         Event::new()
             .uid(
@@ -133,7 +133,6 @@ pub mod calendar {
                 )
                 .as_str(),
             )
-            // .description("here I have something really important to do")
             .starts(date)
             .ends(date + Duration::days(1))
             .append_property(Property::new("TRANSP", "TRANSPARENT").done())
@@ -141,14 +140,14 @@ pub mod calendar {
     }
 
     pub fn to_calendar(delivery_dates: Vec<DeliveryDate>) -> String {
-        let mut my_calendar = Calendar::empty();
-        my_calendar.append_property(("VERSION", "2.0"));
-        my_calendar.append_property(("PRODID", "-//Aasan//Aasan Postgang//EN"));
-        my_calendar.append_property(("CALSCALE", "GREGORIAN"));
-        my_calendar.append_property(("METHOD", "PUBLISH"));
+        let mut cal = Calendar::empty();
+        cal.append_property(("VERSION", "2.0"));
+        cal.append_property(("PRODID", "-//Aasan//Aasan Postgang//EN"));
+        cal.append_property(("CALSCALE", "GREGORIAN"));
+        cal.append_property(("METHOD", "PUBLISH"));
         for date in delivery_dates {
-            my_calendar.push(delivery_date_to_event(date));
+            cal.push(delivery_date_to_event(date));
         }
-        my_calendar.to_string()
+        cal.to_string()
     }
 }
