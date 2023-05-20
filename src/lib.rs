@@ -1,13 +1,33 @@
 use core::fmt;
+use std::{error::Error, fmt::Display};
 
 use chrono::NaiveDate;
 
 #[derive(Debug, Clone)]
 pub struct PostalCode(String);
 
-impl From<String> for PostalCode {
-    fn from(value: String) -> Self {
-        Self(value)
+#[derive(Debug, Clone)]
+pub struct PostalCodeError;
+
+impl Display for PostalCodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(
+            "Invalid postal code format. Postal code must be numeric and consist of 4 digits",
+        )
+    }
+}
+
+impl Error for PostalCodeError {}
+
+impl TryFrom<&str> for PostalCode {
+    type Error = PostalCodeError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.len() != 4 || !value.bytes().all(|c| c.is_ascii_digit()) {
+            Err(PostalCodeError)
+        } else {
+            Ok(Self(value.to_owned()))
+        }
     }
 }
 
