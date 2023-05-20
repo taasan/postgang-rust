@@ -118,39 +118,34 @@ pub mod calendar {
     use chrono::{Datelike, Duration, Weekday::*};
     use icalendar::{Calendar, Component, Event, EventLike, Property};
 
-    pub fn delivery_date_to_event(delivery_date: &DeliveryDate) -> Event {
-        let date = delivery_date.date;
-        let weekday = match date.weekday() {
-            Mon => "mandag",
-            Tue => "tirsdag",
-            Wed => "onsdag",
-            Thu => "torsdag",
-            Fri => "fredag",
-            Sat => "lørdag",
-            Sun => "søndag",
-        };
-        Event::new()
-            .uid(
-                format!(
-                    "postgang-{}-{}",
-                    delivery_date.postal_code, delivery_date.date
+    impl From<&DeliveryDate> for Event {
+        fn from(value: &DeliveryDate) -> Self {
+            let weekday = match value.date.weekday() {
+                Mon => "mandag",
+                Tue => "tirsdag",
+                Wed => "onsdag",
+                Thu => "torsdag",
+                Fri => "fredag",
+                Sat => "lørdag",
+                Sun => "søndag",
+            };
+            Event::new()
+                .uid(format!("postgang-{}-{}", value.postal_code, value.date).as_str())
+                .url("https://www.posten.no/levering-av-post/")
+                .summary(
+                    format!(
+                        "{}: Posten kommer {} {}.",
+                        value.postal_code,
+                        weekday,
+                        value.date.day()
+                    )
+                    .as_str(),
                 )
-                .as_str(),
-            )
-            .url("https://www.posten.no/levering-av-post/")
-            .summary(
-                format!(
-                    "{}: Posten kommer {} {}.",
-                    delivery_date.postal_code,
-                    weekday,
-                    date.day()
-                )
-                .as_str(),
-            )
-            .starts(date)
-            .ends(date + Duration::days(1))
-            .append_property(Property::new("TRANSP", "TRANSPARENT").done())
-            .done()
+                .starts(value.date)
+                .ends(value.date + Duration::days(1))
+                .append_property(Property::new("TRANSP", "TRANSPARENT").done())
+                .done()
+        }
     }
 
     pub fn to_calendar(delivery_dates: Vec<DeliveryDate>) -> String {
@@ -160,7 +155,7 @@ pub mod calendar {
         cal.append_property(("CALSCALE", "GREGORIAN"));
         cal.append_property(("METHOD", "PUBLISH"));
         for date in delivery_dates {
-            cal.push(delivery_date_to_event(&date));
+            cal.push::<Event>((&date).into());
         }
         cal.to_string()
     }
