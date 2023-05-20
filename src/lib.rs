@@ -50,7 +50,7 @@ impl DeliveryDate {
 }
 
 pub trait DeliveryDateProvider {
-    fn get(&self, postal_code: PostalCode) -> core::result::Result<Vec<DeliveryDate>, String>;
+    fn get(&self, postal_code: &PostalCode) -> core::result::Result<Vec<DeliveryDate>, String>;
 }
 
 pub mod bring_client {
@@ -74,15 +74,15 @@ pub mod bring_client {
         }
 
         impl Endpoint {
-            pub fn new(api_key: String, api_uid: String) -> Self {
+            pub fn new(api_key: &str, api_uid: &str) -> Self {
                 let mut headers = HeaderMap::new();
                 headers.insert(
                     "X-Mybring-API-Uid",
-                    HeaderValue::from_str(api_uid.as_str()).unwrap(),
+                    HeaderValue::from_str(api_uid).unwrap(),
                 );
                 headers.insert(
                     "X-Mybring-API-Key",
-                    HeaderValue::from_str(api_key.as_str()).unwrap(),
+                    HeaderValue::from_str(api_key).unwrap(),
                 );
                 let client = Client::builder().default_headers(headers).build().unwrap();
                 Self { client }
@@ -90,7 +90,7 @@ pub mod bring_client {
         }
 
         impl DeliveryDateProvider for Endpoint {
-            fn get(&self, postal_code: PostalCode) -> Result<Vec<DeliveryDate>, String> {
+            fn get(&self, postal_code: &PostalCode) -> Result<Vec<DeliveryDate>, String> {
                 let url = format!(
                     "https://api.bring.com/address/api/{}/postal-codes/{}/mailbox-delivery-dates",
                     "no", postal_code
@@ -124,7 +124,7 @@ pub mod calendar {
     use chrono::{Datelike, Duration, Weekday::*};
     use icalendar::{Calendar, Component, Event, EventLike, Property};
 
-    pub fn delivery_date_to_event(delivery_date: DeliveryDate) -> Event {
+    pub fn delivery_date_to_event(delivery_date: &DeliveryDate) -> Event {
         let date = delivery_date.date;
         let weekday = match date.weekday() {
             Mon => "mandag",
@@ -166,7 +166,7 @@ pub mod calendar {
         cal.append_property(("CALSCALE", "GREGORIAN"));
         cal.append_property(("METHOD", "PUBLISH"));
         for date in delivery_dates {
-            cal.push(delivery_date_to_event(date));
+            cal.push(delivery_date_to_event(&date));
         }
         cal.to_string()
     }

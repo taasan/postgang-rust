@@ -22,7 +22,7 @@ struct Cli {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    match Endpoint::new(cli.api_key, cli.api_uid).get(cli.code) {
+    match Endpoint::new(&cli.api_key, &cli.api_uid).get(&cli.code) {
         Ok(resp) => match cli.output {
             Some(path) => std::fs::write(path, to_calendar(resp))?,
             None => print!("{}", to_calendar(resp)),
