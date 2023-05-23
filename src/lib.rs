@@ -2,10 +2,10 @@ use chrono::NaiveDate;
 use core::fmt::{self, Display};
 use std::error::Error;
 
-#[derive(Debug, Clone)]
-pub struct PostalCode(String);
+#[derive(Debug)]
+pub struct PostalCode<'a>(&'a str);
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PostalCodeError;
 
 impl Display for PostalCodeError {
@@ -18,38 +18,38 @@ impl Display for PostalCodeError {
 
 impl Error for PostalCodeError {}
 
-impl TryFrom<&str> for PostalCode {
+impl<'a> TryFrom<&'a str> for PostalCode<'a> {
     type Error = PostalCodeError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         if value.len() != 4 || !value.bytes().all(|c| c.is_ascii_digit()) {
             Err(PostalCodeError)
         } else {
-            Ok(Self(value.to_owned()))
+            Ok(Self(value))
         }
     }
 }
 
-impl Display for PostalCode {
+impl<'a> Display for PostalCode<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.0))
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct DeliveryDate {
-    pub postal_code: PostalCode,
+#[derive(Debug)]
+pub struct DeliveryDate<'a> {
+    pub postal_code: &'a PostalCode<'a>,
     pub date: NaiveDate,
 }
 
-impl DeliveryDate {
-    pub fn new(postal_code: PostalCode, date: NaiveDate) -> Self {
+impl<'a> DeliveryDate<'a> {
+    pub fn new(postal_code: &'a PostalCode<'a>, date: NaiveDate) -> Self {
         Self { postal_code, date }
     }
 }
 
-pub trait DeliveryDateProvider {
-    fn get(&self, postal_code: &PostalCode) -> Result<Vec<DeliveryDate>, String>;
+pub trait DeliveryDateProvider<'a> {
+    fn get(&'a self, postal_code: &'a PostalCode<'a>) -> Result<Vec<DeliveryDate>, String>;
 }
 
 pub mod bring_client {
@@ -82,8 +82,8 @@ pub mod bring_client {
             }
         }
 
-        impl DeliveryDateProvider for Endpoint {
-            fn get(&self, postal_code: &PostalCode) -> Result<Vec<DeliveryDate>, String> {
+        impl<'a> DeliveryDateProvider<'a> for Endpoint {
+            fn get(&'a self, postal_code: &'a PostalCode<'a>) -> Result<Vec<DeliveryDate>, String> {
                 let url = format!(
                     "https://api.bring.com/address/api/{}/postal-codes/{}/mailbox-delivery-dates",
                     "no", postal_code
@@ -102,7 +102,7 @@ pub mod bring_client {
                             response
                                 .delivery_dates
                                 .iter()
-                                .map(|date| DeliveryDate::new(postal_code.clone(), *date))
+                                .map(|date| DeliveryDate::new(postal_code, *date))
                                 .collect()
                         })
                         .map_err(|x| x.to_string())
@@ -117,8 +117,8 @@ pub mod calendar {
     use chrono::{Datelike, Duration, Weekday::*};
     use icalendar::{Calendar, Component, Event, EventLike, Property};
 
-    impl From<&DeliveryDate> for Event {
-        fn from(value: &DeliveryDate) -> Self {
+    impl<'a> From<&'a DeliveryDate<'a>> for Event {
+        fn from(value: &DeliveryDate<'a>) -> Self {
             let weekday = match value.date.weekday() {
                 Mon => "mandag",
                 Tue => "tirsdag",
