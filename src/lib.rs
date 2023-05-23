@@ -1,7 +1,6 @@
-use core::fmt;
-use std::{error::Error, fmt::Display};
-
 use chrono::NaiveDate;
+use core::fmt::{self, Display};
+use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct PostalCode(String);
@@ -31,7 +30,7 @@ impl TryFrom<&str> for PostalCode {
     }
 }
 
-impl fmt::Display for PostalCode {
+impl Display for PostalCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.0))
     }
@@ -50,7 +49,7 @@ impl DeliveryDate {
 }
 
 pub trait DeliveryDateProvider {
-    fn get(&self, postal_code: &PostalCode) -> core::result::Result<Vec<DeliveryDate>, String>;
+    fn get(&self, postal_code: &PostalCode) -> Result<Vec<DeliveryDate>, String>;
 }
 
 pub mod bring_client {
