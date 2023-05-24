@@ -1,12 +1,17 @@
 use clap::Parser;
 use postgang::bring_client::mailbox_delivery_dates::Endpoint;
 use postgang::calendar::to_calendar;
-use postgang::{DeliveryDateProvider, PostalCode};
+use postgang::{DeliveryDateProvider, PostalCode, PostalCodeError};
+
+fn postal_code_parser(value: &str) -> Result<String, PostalCodeError> {
+    PostalCode::try_from(value)?;
+    Ok(value.to_owned())
+}
 
 #[derive(clap::Parser)]
 #[clap(version = clap::crate_version!())]
 struct Cli {
-    #[arg(long)]
+    #[arg(long, value_parser = postal_code_parser)]
     code: String,
     #[arg(long)]
     output: Option<std::path::PathBuf>,
