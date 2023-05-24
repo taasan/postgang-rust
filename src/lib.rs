@@ -2,8 +2,8 @@ use chrono::NaiveDate;
 use core::fmt::{self, Display};
 use std::error::Error;
 
-#[derive(Debug)]
-pub struct PostalCode<'a>(&'a str);
+#[derive(Debug, Clone)]
+pub struct PostalCode(String);
 
 #[derive(Debug)]
 pub struct PostalCodeError;
@@ -18,19 +18,19 @@ impl Display for PostalCodeError {
 
 impl Error for PostalCodeError {}
 
-impl<'a> TryFrom<&'a str> for PostalCode<'a> {
+impl<'a> TryFrom<&'a str> for PostalCode {
     type Error = PostalCodeError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         if value.len() != 4 || !value.bytes().all(|c| c.is_ascii_digit()) {
             Err(PostalCodeError)
         } else {
-            Ok(Self(value))
+            Ok(Self(value.to_owned()))
         }
     }
 }
 
-impl<'a> Display for PostalCode<'a> {
+impl Display for PostalCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.0))
     }
@@ -38,18 +38,18 @@ impl<'a> Display for PostalCode<'a> {
 
 #[derive(Debug)]
 pub struct DeliveryDate<'a> {
-    pub postal_code: &'a PostalCode<'a>,
+    pub postal_code: &'a PostalCode,
     pub date: NaiveDate,
 }
 
 impl<'a> DeliveryDate<'a> {
-    pub fn new(postal_code: &'a PostalCode<'a>, date: NaiveDate) -> Self {
+    pub fn new(postal_code: &'a PostalCode, date: NaiveDate) -> Self {
         Self { postal_code, date }
     }
 }
 
 pub trait DeliveryDateProvider<'a> {
-    fn get(&'a self, postal_code: &'a PostalCode<'a>) -> Result<Vec<DeliveryDate>, String>;
+    fn get(&'a self, postal_code: &'a PostalCode) -> Result<Vec<DeliveryDate>, String>;
 }
 
 pub mod bring_client {
@@ -83,7 +83,7 @@ pub mod bring_client {
         }
 
         impl<'a> DeliveryDateProvider<'a> for Endpoint {
-            fn get(&'a self, postal_code: &'a PostalCode<'a>) -> Result<Vec<DeliveryDate>, String> {
+            fn get(&'a self, postal_code: &'a PostalCode) -> Result<Vec<DeliveryDate>, String> {
                 let url = format!(
                     "https://api.bring.com/address/api/{}/postal-codes/{}/mailbox-delivery-dates",
                     "no", postal_code
