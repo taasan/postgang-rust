@@ -53,13 +53,37 @@ pub trait DeliveryDateProvider<'a> {
 }
 
 pub mod bring_client {
+    const HEADER_UID: &str = "X-Mybring-API-Uid";
+    const HEADER_KEY: &str = "X-Mybring-API-Key";
+
     pub mod mailbox_delivery_dates {
         use crate::{DeliveryDate, DeliveryDateProvider, PostalCode};
         use chrono::NaiveDate;
         use reqwest::blocking::Client;
         use reqwest::header::{HeaderMap, HeaderValue};
-
         use serde::Deserialize;
+        use std::fmt::Debug;
+
+        #[derive(Clone)]
+        pub struct ApiKey(HeaderValue);
+
+        impl ApiKey {
+            pub fn new(value: HeaderValue) -> Self {
+                if !value.is_sensitive() {
+                    let mut value = value.clone();
+                    value.set_sensitive(true);
+                    Self(value)
+                } else {
+                    Self(value)
+                }
+            }
+        }
+
+        impl Debug for ApiKey {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_tuple("ApiKey").field(&self.0).finish()
+            }
+        }
 
         #[derive(Deserialize, Debug)]
         struct ApiResponse {
@@ -73,10 +97,12 @@ pub mod bring_client {
         }
 
         impl Endpoint {
-            pub fn new(api_key: &str, api_uid: &str) -> Self {
-                let mut headers = HeaderMap::new();
-                headers.insert("X-Mybring-API-Uid", HeaderValue::from_str(api_uid).unwrap());
-                headers.insert("X-Mybring-API-Key", HeaderValue::from_str(api_key).unwrap());
+            pub fn new(api_key: ApiKey, api_uid: HeaderValue) -> Self {
+                let mut headers = HeaderMap::with_capacity(3);
+                headers.insert("accept", HeaderValue::from_str("application/json").unwrap());
+                headers.insert(super::HEADER_UID, api_uid);
+                headers.insert(super::HEADER_KEY, api_key.0);
+                log::info!("Constructing HTTP client with headers: {:?}", headers);
                 let client = Client::builder().default_headers(headers).build().unwrap();
                 Self { client }
             }
@@ -88,25 +114,21 @@ pub mod bring_client {
                     "https://api.bring.com/address/api/{}/postal-codes/{}/mailbox-delivery-dates",
                     "no", postal_code
                 );
+                log::info!("Using URL: {url}");
                 let resp = self.client.get(&url).send().map_err(|x| x.to_string())?;
-                if resp.status().is_client_error() {
-                    Err(format!(
-                        "URL: {url}, HTTP Status: {}, body: {}",
-                        resp.status(),
-                        resp.text().map_err(|x| x.to_string())?
-                    ))
-                } else {
-                    resp.error_for_status_ref().map_err(|x| x.to_string())?;
-                    resp.json::<ApiResponse>()
-                        .map(|response| {
-                            response
-                                .delivery_dates
-                                .iter()
-                                .map(|date| DeliveryDate::new(postal_code, *date))
-                                .collect()
-                        })
-                        .map_err(|x| x.to_string())
-                }
+                log::info!("Got response status: {}", resp.status());
+
+                resp.error_for_status_ref().map_err(|x| x.to_string())?;
+                resp.json::<ApiResponse>()
+                    .map(|response| {
+                        log::info!("Got: {:?}", response);
+                        response
+                            .delivery_dates
+                            .iter()
+                            .map(|date| DeliveryDate::new(postal_code, *date))
+                            .collect()
+                    })
+                    .map_err(|x| x.to_string())
             }
         }
     }
@@ -119,6 +141,7 @@ pub mod calendar {
 
     impl<'a> From<&'a DeliveryDate<'a>> for Event {
         fn from(value: &DeliveryDate<'a>) -> Self {
+            log::trace!("Converting {:?} to Event", value);
             let weekday = match value.date.weekday() {
                 Mon => "mandag",
                 Tue => "tirsdag",
