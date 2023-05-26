@@ -1,12 +1,13 @@
 use clap::Parser as ClapParser;
-use postgang::bring_client::mailbox_delivery_dates::{ApiKey, Endpoint};
+use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
+use postgang::bring_client::ApiKey;
+use postgang::bring_client::{InvalidPostalCode, NorwegianPostalCode};
 use postgang::calendar::to_calendar;
-use postgang::{PostalCode, PostalCodeError};
 use reqwest::header::{HeaderValue, InvalidHeaderValue};
 use std::path::PathBuf;
 
-fn postal_code_parser(value: &str) -> Result<PostalCode, PostalCodeError> {
-    PostalCode::try_from(value)
+fn postal_code_parser(value: &str) -> Result<NorwegianPostalCode, InvalidPostalCode> {
+    NorwegianPostalCode::try_from(value)
 }
 
 fn parse_secret(value: &str) -> Result<ApiKey, InvalidHeaderValue> {
@@ -27,7 +28,10 @@ enum Commands {
         api_key: ApiKey,
     },
     /// Get delivery dates from JSON file
-    File { input: PathBuf },
+    File {
+        /// File path
+        input: PathBuf,
+    },
 }
 
 #[derive(ClapParser, Debug)]
@@ -37,19 +41,19 @@ struct Cli {
     command: Commands,
     #[arg(long, value_parser = postal_code_parser)]
     /// Postal code
-    code: PostalCode,
+    code: NorwegianPostalCode,
     #[arg(long)]
-    /// Output file
+    /// File path
     output: Option<PathBuf>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let cli = Cli::parse();
-    log::info!("Got CLI args: {:?}", cli);
+    log::debug!("Got CLI args: {:?}", cli);
     let endpoint = match cli.command {
-        Commands::Api { api_key, api_uid } => Endpoint::api(api_key, api_uid),
-        Commands::File { input } => Endpoint::file(input),
+        Commands::Api { api_key, api_uid } => DeliveryDays::api(api_key, api_uid),
+        Commands::File { input } => DeliveryDays::file(input),
     };
     match endpoint.get(&cli.code) {
         Ok(resp) => match cli.output {

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail
+
+cat <<'EOF'
+# Norwegian mailbox delivery dates calendar
+
+A command line interface for generating an iCal version of [Bring's API for mailbox delivery dates](https://developer.bring.com/api/postal-code/#get-mailbox-delivery-dates-at-postal-code-get)
+or from a JSON file.
+
+## Help
+
+```
+EOF
+
+cargo run -q -- help
+
+cat <<'EOF'
+```
+
+## Api
+
+```
+EOF
+
+cargo run -q -- help api
+
+cat <<'EOF'
+```
+
+## File
+
+```
+EOF
+
+cargo run -q -- help file
+
+cat <<'EOF'
+```
+
+## Example output
+
+```ical
+EOF
+
+echo '{"delivery_dates":["2023-02-06","2023-02-08","2023-02-10","2023-02-14","2023-02-16","2023-02-20"]}' \
+  | cargo run -q -- --code 7530 file /dev/stdin | dos2unix
+
+cat <<'EOF'
+```
+EOF
