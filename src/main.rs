@@ -36,8 +36,10 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
     #[arg(long, value_parser = postal_code_parser)]
+    /// Postal code
     code: PostalCode,
     #[arg(long)]
+    /// Output file
     output: Option<PathBuf>,
 }
 
