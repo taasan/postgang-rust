@@ -55,7 +55,7 @@ impl<'a> From<ApiResponseWithPostalCode<'a>> for Vec<DeliveryDate<'a>> {
     }
 }
 
-/// Delivery day provider.        
+/// Delivery day provider.
 pub enum DeliveryDays {
     /// Fetches JSON from [Bring API](https://developer.bring.com/api/postal-code/#get-mailbox-delivery-dates-at-postal-code-get).
     // https://api.bring.com/address/api/{country-code}/postal-codes/{postal-code}/mailbox-delivery-dates
