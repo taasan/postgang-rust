@@ -18,3 +18,10 @@ repos:
     -   id: fmt
     -   id: cargo-check
     -   id: clippy
+-   repo: local
+    hooks:
+    -   id: update-readme
+        name: generate README.md
+        language: system
+        always_run: true
+        entry: ./make-readme

@@ -2,6 +2,8 @@
 
 set -eu -o pipefail
 
+exec >README.md
+
 cat <<'EOF'
 # Norwegian mailbox delivery dates calendar
 
