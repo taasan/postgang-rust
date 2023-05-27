@@ -29,9 +29,9 @@ fn parse_header_value(value: &str) -> Result<HeaderValue, InvalidHeaderValue> {
 enum Commands {
     /// Get delivery dates from Bring API
     Api {
-        #[arg(long, env = "POSTGANG_API_UID", value_parser = parse_header_value)]
+        #[arg(long, env = "POSTGANG_API_UID", value_parser = parse_header_value, hide_env_values = true)]
         api_uid: HeaderValue,
-        #[arg(long, env = "POSTGANG_API_KEY", value_parser = parse_secret)]
+        #[arg(long, env = "POSTGANG_API_KEY", value_parser = parse_secret, hide_env_values = true)]
         api_key: ApiKey,
     },
     /// Get delivery dates from JSON file

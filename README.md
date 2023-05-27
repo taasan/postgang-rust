@@ -28,8 +28,8 @@ Get delivery dates from Bring API
 Usage: postgang --code <CODE> api --api-uid <API_UID> --api-key <API_KEY>
 
 Options:
-      --api-uid <API_UID>  [env: POSTGANG_API_UID=]
-      --api-key <API_KEY>  [env: POSTGANG_API_KEY=]
+      --api-uid <API_UID>  [env: POSTGANG_API_UID]
+      --api-key <API_KEY>  [env: POSTGANG_API_KEY]
   -h, --help               Print help
 ```
 
