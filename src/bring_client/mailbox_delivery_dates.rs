@@ -1,8 +1,8 @@
 //! Mailbox delivery dates API.
 
 use super::ApiKey;
+use super::NorwegianPostalCode;
 use super::NORWAY;
-use crate::bring_client::NorwegianPostalCode;
 use chrono::{DateTime, NaiveDate, Utc};
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue};
