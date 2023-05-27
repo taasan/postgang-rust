@@ -45,10 +45,10 @@ cat <<'EOF'
 ```ical
 EOF
 
-echo '{"delivery_dates":["2023-02-06","2023-02-08","2023-02-10","2023-02-14","2023-02-16","2023-02-20"]}' \
-  | cargo run -q -- --code 7530 file /dev/stdin \
-  | dos2unix \
-  | sed 's/^DTSTAMP:.*$/DTSTAMP:20230526T233349Z/'
+echo '{"delivery_dates":["2023-02-06","2023-02-08","2023-02-10","2023-02-14","2023-02-16","2023-02-20"]}' |
+    cargo run -q -- --code 7530 file /dev/stdin |
+    dos2unix |
+    sed 's/^DTSTAMP:.*$/DTSTAMP:20230526T233349Z/'
 
 cat <<'EOF'
 ```

@@ -25,3 +25,12 @@ repos:
         language: system
         always_run: true
         entry: ./make-readme
+
+- repo: https://github.com/jumanjihouse/pre-commit-hooks
+  rev: 3.0.0
+  hooks:
+      - id: script-must-not-have-extension
+      - id: shellcheck
+      - id: shfmt
+        args:
+            - --indent 4
