@@ -6,5 +6,14 @@
 #![deny(clippy::pedantic)]
 #![deny(unused_qualifications)]
 
+use std::io;
+use std::path::PathBuf;
+
 pub mod bring_client;
 pub mod calendar;
+
+#[inline]
+#[must_use]
+pub fn io_error_to_string(err: &io::Error, path: &PathBuf) -> String {
+    format!("{err}: {path:?}")
+}

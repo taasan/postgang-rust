@@ -4,8 +4,12 @@ use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
 use postgang::bring_client::ApiKey;
 use postgang::bring_client::{InvalidPostalCode, NorwegianPostalCode};
 use postgang::calendar::to_calendar_string;
+use postgang::io_error_to_string;
 use reqwest::header::{HeaderValue, InvalidHeaderValue};
+use std::error::Error;
+use std::io::Write;
 use std::path::PathBuf;
+use std::process::ExitCode;
 
 const VERSION: &str = git_version!(
     prefix = "git:",
@@ -54,7 +58,7 @@ struct Cli {
     output: Option<PathBuf>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn try_main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     let cli = Cli::parse();
     log::debug!("Got CLI args: {:?}", cli);
@@ -62,16 +66,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Api { api_key, api_uid } => DeliveryDays::api(api_key, api_uid),
         Commands::File { input } => DeliveryDays::file(input),
     };
-    match endpoint.get(&cli.code) {
-        Ok(resp) => match cli.output {
-            Some(path) => std::fs::write(path, to_calendar_string(resp))?,
-            None => print!("{}", to_calendar_string(resp)),
-        },
-        Err(err) => {
-            log::error!("{err}");
-            std::process::exit(1)
+    match cli.output {
+        Some(path) => {
+            // Try to create file before we do any network requests
+            let mut file =
+                std::fs::File::create(&path).map_err(|err| io_error_to_string(&err, &path))?;
+            write!(file, "{}", to_calendar_string(endpoint.get(&cli.code)?))
+                .map_err(|err| io_error_to_string(&err, &path))?;
         }
+        None => print!("{}", to_calendar_string(endpoint.get(&cli.code)?)),
     }
 
     Ok(())
+}
+
+fn main() -> ExitCode {
+    match try_main() {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(err) => {
+            log::error!("{err}");
+            ExitCode::FAILURE
+        }
+    }
 }

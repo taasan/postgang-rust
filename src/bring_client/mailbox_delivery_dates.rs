@@ -3,6 +3,7 @@
 use super::ApiKey;
 use super::NorwegianPostalCode;
 use super::NORWAY;
+use crate::io_error_to_string;
 use chrono::{DateTime, NaiveDate, Utc};
 use core::fmt::Debug;
 use reqwest::blocking::Client;
@@ -105,7 +106,9 @@ impl DeliveryDays {
             }
             Self::File(path) => {
                 log::debug!("Reading from file: {:?}", path);
-                serde_json::from_reader(std::fs::File::open(path)?)?
+                serde_json::from_reader(
+                    std::fs::File::open(path).map_err(|err| io_error_to_string(&err, path))?,
+                )?
             }
         };
         log::debug!("Got: {:?}", response);
