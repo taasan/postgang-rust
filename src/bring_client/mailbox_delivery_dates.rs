@@ -4,10 +4,10 @@ use super::ApiKey;
 use super::NorwegianPostalCode;
 use super::NORWAY;
 use chrono::{DateTime, NaiveDate, Utc};
+use core::fmt::Debug;
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde::Deserialize;
-use std::fmt::Debug;
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -19,6 +19,7 @@ pub struct DeliveryDate<'a> {
 }
 
 impl<'a> DeliveryDate<'a> {
+    #[must_use]
     pub fn new(
         postal_code: &'a NorwegianPostalCode,
         date: NaiveDate,
@@ -45,7 +46,7 @@ struct ApiResponseWithPostalCode<'a> {
 
 impl<'a> From<ApiResponseWithPostalCode<'a>> for Vec<DeliveryDate<'a>> {
     fn from(value: ApiResponseWithPostalCode<'a>) -> Self {
-        let now = chrono::Utc::now();
+        let now = Utc::now();
         value
             .response
             .delivery_dates
@@ -67,6 +68,7 @@ pub enum DeliveryDays {
 
 impl DeliveryDays {
     /// Read dates from REST API.
+    #[allow(clippy::missing_panics_doc)]
     pub fn api(api_key: ApiKey, api_uid: HeaderValue) -> Self {
         let mut headers = HeaderMap::with_capacity(3);
         headers.insert("accept", HeaderValue::from_str("application/json").unwrap());
@@ -77,12 +79,14 @@ impl DeliveryDays {
         Self::Api(client)
     }
 
+    #[must_use]
     /// Read dates from file.
     pub fn file(path: PathBuf) -> Self {
         Self::File(path)
     }
 
     /// Get a list of delivery dates.
+    #[allow(clippy::missing_errors_doc)]
     pub fn get<'a>(
         &'a self,
         postal_code: &'a NorwegianPostalCode,
@@ -90,8 +94,7 @@ impl DeliveryDays {
         let response: ApiResponse = match self {
             Self::Api(client) => {
                 let url = format!(
-                    "https://api.bring.com/address/api/{}/postal-codes/{}/mailbox-delivery-dates",
-                    NORWAY, postal_code
+                    "https://api.bring.com/address/api/{NORWAY}/postal-codes/{postal_code}/mailbox-delivery-dates"
                 );
                 log::debug!("Using URL: {url}");
                 let resp = client.get(&url).send()?;
@@ -106,10 +109,10 @@ impl DeliveryDays {
             }
         };
         log::debug!("Got: {:?}", response);
-        let rwpc = ApiResponseWithPostalCode {
+        Ok(ApiResponseWithPostalCode {
             response,
             postal_code,
-        };
-        Ok(rwpc.into())
+        }
+        .into())
     }
 }

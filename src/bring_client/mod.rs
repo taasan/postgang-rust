@@ -1,8 +1,7 @@
 //! Client for the [Bring postal code API](https://developer.bring.com/api/postal-code/).
-use core::fmt::{self, Display};
+use core::fmt::{self, Debug, Display};
 use reqwest::header::HeaderValue;
 use std::error::Error;
-use std::fmt::Debug;
 
 const HEADER_UID: &str = "X-Mybring-API-Uid";
 const HEADER_KEY: &str = "X-Mybring-API-Key";
@@ -27,7 +26,7 @@ const INVALID_NORWEGIAN_POST_CODE: &str =
 pub struct NorwegianPostalCode(u16);
 
 #[derive(Debug)]
-/// A possible error when converting a PostalCode from a string.
+/// A possible error when converting a `PostalCode` from a string.
 pub struct InvalidPostalCode(&'static str);
 
 impl Display for InvalidPostalCode {
@@ -63,6 +62,7 @@ impl Display for NorwegianPostalCode {
 pub struct ApiKey(HeaderValue);
 
 impl ApiKey {
+    #[must_use]
     /// Create a new `ApiKey` from `HeaderValue`.
     ///
     /// The header is marked sensitive as to not leak secrets in log output.
@@ -74,18 +74,18 @@ impl ApiKey {
     /// assert_eq!(format!("{:?}", value), "ApiKey(Sensitive)");
     /// ```
     pub fn new(value: HeaderValue) -> Self {
-        if !value.is_sensitive() {
-            let mut value = value;
-            value.set_sensitive(true);
+        if value.is_sensitive() {
             Self(value)
         } else {
+            let mut value = value;
+            value.set_sensitive(true);
             Self(value)
         }
     }
 }
 
 impl Debug for ApiKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("ApiKey").field(&self.0).finish()
     }
 }

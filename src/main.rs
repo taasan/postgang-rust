@@ -3,7 +3,7 @@ use git_version::git_version;
 use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
 use postgang::bring_client::ApiKey;
 use postgang::bring_client::{InvalidPostalCode, NorwegianPostalCode};
-use postgang::calendar::to_calendar;
+use postgang::calendar::to_calendar_string;
 use reqwest::header::{HeaderValue, InvalidHeaderValue};
 use std::path::PathBuf;
 
@@ -64,8 +64,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     match endpoint.get(&cli.code) {
         Ok(resp) => match cli.output {
-            Some(path) => std::fs::write(path, to_calendar(resp))?,
-            None => print!("{}", to_calendar(resp)),
+            Some(path) => std::fs::write(path, to_calendar_string(resp))?,
+            None => print!("{}", to_calendar_string(resp)),
         },
         Err(err) => {
             log::error!("{err}");

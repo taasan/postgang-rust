@@ -1,6 +1,9 @@
 //! iCalendar generator
 use super::bring_client::mailbox_delivery_dates::DeliveryDate;
-use chrono::{Datelike, Duration, Weekday::*};
+use chrono::{
+    Datelike, Duration,
+    Weekday::{Fri, Mon, Sat, Sun, Thu, Tue, Wed},
+};
 use icalendar::{Calendar, Component, Event, EventLike, Property};
 
 impl<'a> From<&'a DeliveryDate<'a>> for Event {
@@ -37,6 +40,7 @@ impl<'a> From<&'a DeliveryDate<'a>> for Event {
     }
 }
 
+#[must_use]
 /// Dump delivery dates as an iCalendar string.
 ///
 /// ```
@@ -44,13 +48,13 @@ impl<'a> From<&'a DeliveryDate<'a>> for Event {
 /// use chrono::{DateTime, FixedOffset, NaiveDate, Utc};
 /// use postgang::bring_client::mailbox_delivery_dates::DeliveryDate;
 /// use postgang::bring_client::NorwegianPostalCode;
-/// use postgang::calendar::to_calendar;
+/// use postgang::calendar::to_calendar_string;
 ///
 /// let postal_code = &NorwegianPostalCode::try_from("7800").unwrap();
 /// let date = NaiveDate::from_ymd_opt(1970, 8, 13).unwrap();
 /// let created = DateTime::<FixedOffset>::parse_from_rfc3339("1970-08-13T00:00:00Z").unwrap().into();
 /// let delivery_dates = vec![DeliveryDate::new(postal_code, date, created)];
-/// let ical_str = to_calendar(delivery_dates);
+/// let ical_str = to_calendar_string(delivery_dates);
 ///
 /// assert_eq!(
 ///     ical_str,
@@ -70,7 +74,7 @@ impl<'a> From<&'a DeliveryDate<'a>> for Event {
 ///      END:VEVENT\r\n\
 ///      END:VCALENDAR\r\n");
 /// ```
-pub fn to_calendar(delivery_dates: Vec<DeliveryDate>) -> String {
+pub fn to_calendar_string(delivery_dates: Vec<DeliveryDate>) -> String {
     let mut cal = Calendar::empty();
     cal.append_property(("VERSION", "2.0"));
     cal.append_property(("PRODID", "-//Aasan//Aasan Postgang//EN"));
