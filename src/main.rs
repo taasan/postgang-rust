@@ -1,10 +1,17 @@
 use clap::Parser as ClapParser;
+use git_version::git_version;
 use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
 use postgang::bring_client::ApiKey;
 use postgang::bring_client::{InvalidPostalCode, NorwegianPostalCode};
 use postgang::calendar::to_calendar;
 use reqwest::header::{HeaderValue, InvalidHeaderValue};
 use std::path::PathBuf;
+
+const VERSION: &str = git_version!(
+    prefix = "git:",
+    cargo_prefix = "cargo:",
+    fallback = "unknown"
+);
 
 fn postal_code_parser(value: &str) -> Result<NorwegianPostalCode, InvalidPostalCode> {
     NorwegianPostalCode::try_from(value)
@@ -35,7 +42,7 @@ enum Commands {
 }
 
 #[derive(ClapParser, Debug)]
-#[clap(version = clap::crate_version!())]
+#[clap(version = VERSION)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
