@@ -1,42 +1,30 @@
 //! iCalendar generator
 use super::bring_client::mailbox_delivery_dates::DeliveryDate;
 use chrono::{
-    Datelike, Duration,
+    format::{DelayedFormat, StrftimeItems},
+    DateTime, Datelike, Duration, NaiveDate, Utc,
     Weekday::{Fri, Mon, Sat, Sun, Thu, Tue, Wed},
 };
-use icalendar::{Calendar, Component, Event, EventLike, Property};
 
-impl<'a> From<&'a DeliveryDate<'a>> for Event {
-    fn from(value: &DeliveryDate<'a>) -> Self {
-        log::trace!("Converting {:?} to Event", value);
-        let weekday = match value.date.weekday() {
-            Mon => "mandag",
-            Tue => "tirsdag",
-            Wed => "onsdag",
-            Thu => "torsdag",
-            Fri => "fredag",
-            Sat => "lørdag",
-            Sun => "søndag",
-        };
-        let event = Event::new()
-            .timestamp(value.created)
-            .uid(format!("postgang-{}-{}", value.postal_code, value.date).as_str())
-            .url("https://www.posten.no/levering-av-post/")
-            .summary(
-                format!(
-                    "{}: Posten kommer {} {}.",
-                    value.postal_code,
-                    weekday,
-                    value.date.day()
-                )
-                .as_str(),
-            )
-            .starts(value.date)
-            .ends(value.date + Duration::days(1))
-            .append_property(Property::new("TRANSP", "TRANSPARENT").done())
-            .done();
-        log::trace!("{:?}", event);
-        event
+#[inline]
+fn format_naive_date<'a>(date: NaiveDate) -> DelayedFormat<StrftimeItems<'a>> {
+    date.format("%Y%m%d")
+}
+
+#[inline]
+fn format_timestamp<'a>(timestamp: &DateTime<Utc>) -> DelayedFormat<StrftimeItems<'a>> {
+    timestamp.format("%Y%m%dT%H%M%SZ")
+}
+
+fn weekday(date: NaiveDate) -> &'static str {
+    match date.weekday() {
+        Mon => "mandag",
+        Tue => "tirsdag",
+        Wed => "onsdag",
+        Thu => "torsdag",
+        Fri => "fredag",
+        Sat => "lørdag",
+        Sun => "søndag",
     }
 }
 
@@ -75,13 +63,41 @@ impl<'a> From<&'a DeliveryDate<'a>> for Event {
 ///      END:VCALENDAR\r\n");
 /// ```
 pub fn to_calendar_string(delivery_dates: Vec<DeliveryDate>) -> String {
-    let mut cal = Calendar::empty();
-    cal.append_property(("VERSION", "2.0"));
-    cal.append_property(("PRODID", "-//Aasan//Aasan Postgang//EN"));
-    cal.append_property(("CALSCALE", "GREGORIAN"));
-    cal.append_property(("METHOD", "PUBLISH"));
-    for date in delivery_dates {
-        cal.push::<Event>((&date).into());
+    let cap = 7 + 9 * delivery_dates.len();
+    let mut buf: Vec<String> = Vec::with_capacity(cap);
+    buf.push("BEGIN:VCALENDAR".to_owned());
+    buf.push("VERSION:2.0".to_owned());
+    buf.push("PRODID:-//Aasan//Aasan Postgang//EN".to_owned());
+    buf.push("CALSCALE:GREGORIAN".to_owned());
+    buf.push("METHOD:PUBLISH".to_owned());
+    for value in delivery_dates {
+        buf.push("BEGIN:VEVENT".to_owned());
+        buf.push(format!(
+            "DTEND;VALUE=DATE:{}",
+            format_naive_date(value.date + Duration::days(1))
+        ));
+        buf.push(format!("DTSTAMP:{}", format_timestamp(&value.created)));
+        buf.push(format!(
+            "DTSTART;VALUE=DATE:{}",
+            format_naive_date(value.date)
+        ));
+        buf.push(format!(
+            "SUMMARY:{}: Posten kommer {} {}.",
+            value.postal_code,
+            weekday(value.date),
+            value.date.day()
+        ));
+        buf.push("TRANSP:TRANSPARENT".to_owned());
+        buf.push(format!("UID:postgang-{}-{}", value.postal_code, value.date));
+        buf.push("URL:https://www.posten.no/levering-av-post/".to_owned());
+        buf.push("END:VEVENT".to_owned());
     }
-    cal.to_string()
+    buf.push("END:VCALENDAR".to_owned());
+    buf.push(String::new());
+    debug_assert!(
+        buf.iter().all(|line| line.len() <= 75),
+        "Some lines ecceed 75 bytes, implement line folding?"
+    );
+    debug_assert_eq!(cap, buf.len(), "String buffer initial capacity is wrong");
+    buf.join("\r\n")
 }
