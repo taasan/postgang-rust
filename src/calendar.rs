@@ -41,8 +41,8 @@ fn weekday(date: NaiveDate) -> &'static str {
 /// let postal_code = &NorwegianPostalCode::try_from("7800").unwrap();
 /// let date = NaiveDate::from_ymd_opt(1970, 8, 13).unwrap();
 /// let created = DateTime::<FixedOffset>::parse_from_rfc3339("1970-08-13T00:00:00Z").unwrap().into();
-/// let delivery_dates = vec![DeliveryDate::new(postal_code, date, created)];
-/// let ical_str = to_calendar_string(delivery_dates);
+/// let delivery_dates = vec![DeliveryDate::new(postal_code, date)];
+/// let ical_str = to_calendar_string(delivery_dates, Some(created));
 ///
 /// assert_eq!(
 ///     ical_str,
@@ -62,7 +62,10 @@ fn weekday(date: NaiveDate) -> &'static str {
 ///      END:VEVENT\r\n\
 ///      END:VCALENDAR\r\n");
 /// ```
-pub fn to_calendar_string(delivery_dates: Vec<DeliveryDate>) -> String {
+pub fn to_calendar_string(
+    delivery_dates: Vec<DeliveryDate>,
+    created: Option<DateTime<Utc>>,
+) -> String {
     let cap = 7 + 9 * delivery_dates.len();
     let mut buf: Vec<String> = Vec::with_capacity(cap);
     buf.push("BEGIN:VCALENDAR".to_owned());
@@ -76,7 +79,10 @@ pub fn to_calendar_string(delivery_dates: Vec<DeliveryDate>) -> String {
             "DTEND;VALUE=DATE:{}",
             format_naive_date(value.date + Duration::days(1))
         ));
-        buf.push(format!("DTSTAMP:{}", format_timestamp(&value.created)));
+        buf.push(format!(
+            "DTSTAMP:{}",
+            format_timestamp(&(created.unwrap_or(Utc::now())))
+        ));
         buf.push(format!(
             "DTSTART;VALUE=DATE:{}",
             format_naive_date(value.date)

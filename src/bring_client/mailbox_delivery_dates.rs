@@ -5,7 +5,7 @@ use super::NorwegianPostalCode;
 use super::NORWAY;
 use crate::bring_client::ApiUid;
 use crate::io_error_to_string;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::NaiveDate;
 use core::fmt::Debug;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
@@ -17,21 +17,12 @@ use std::path::PathBuf;
 pub struct DeliveryDate<'a> {
     pub postal_code: &'a NorwegianPostalCode,
     pub date: NaiveDate,
-    pub created: DateTime<Utc>,
 }
 
 impl<'a> DeliveryDate<'a> {
     #[must_use]
-    pub fn new(
-        postal_code: &'a NorwegianPostalCode,
-        date: NaiveDate,
-        created: DateTime<Utc>,
-    ) -> Self {
-        Self {
-            postal_code,
-            date,
-            created,
-        }
+    pub fn new(postal_code: &'a NorwegianPostalCode, date: NaiveDate) -> Self {
+        Self { postal_code, date }
     }
 }
 
@@ -48,12 +39,11 @@ struct ApiResponseWithPostalCode<'a> {
 
 impl<'a> From<ApiResponseWithPostalCode<'a>> for Vec<DeliveryDate<'a>> {
     fn from(value: ApiResponseWithPostalCode<'a>) -> Self {
-        let now = Utc::now();
         value
             .response
             .delivery_dates
             .iter()
-            .map(|date| DeliveryDate::new(value.postal_code, *date, now))
+            .map(|date| DeliveryDate::new(value.postal_code, *date))
             .collect()
     }
 }

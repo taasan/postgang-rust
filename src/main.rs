@@ -72,11 +72,14 @@ async fn try_main() -> Result<(), Box<dyn Error>> {
             write!(
                 file,
                 "{}",
-                to_calendar_string(endpoint.get(&cli.code).await?)
+                to_calendar_string(endpoint.get(&cli.code).await?, None)
             )
             .map_err(|err| io_error_to_string(&err, &path))?;
         }
-        None => print!("{}", to_calendar_string(endpoint.get(&cli.code).await?)),
+        None => print!(
+            "{}",
+            to_calendar_string(endpoint.get(&cli.code).await?, None)
+        ),
     }
 
     Ok(())
