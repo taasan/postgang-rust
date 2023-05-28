@@ -14,14 +14,14 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 /// Represents a mailbox delivery date for a specific postal code.
-pub struct DeliveryDate<'a> {
-    pub postal_code: &'a NorwegianPostalCode,
+pub struct DeliveryDate {
+    pub postal_code: NorwegianPostalCode,
     pub date: NaiveDate,
 }
 
-impl<'a> DeliveryDate<'a> {
+impl DeliveryDate {
     #[must_use]
-    pub fn new(postal_code: &'a NorwegianPostalCode, date: NaiveDate) -> Self {
+    pub fn new(postal_code: NorwegianPostalCode, date: NaiveDate) -> Self {
         Self { postal_code, date }
     }
 }
@@ -32,13 +32,13 @@ struct ApiResponse {
     delivery_dates: Vec<NaiveDate>,
 }
 
-struct ApiResponseWithPostalCode<'a> {
+struct ApiResponseWithPostalCode {
     response: ApiResponse,
-    postal_code: &'a NorwegianPostalCode,
+    postal_code: NorwegianPostalCode,
 }
 
-impl<'a> From<ApiResponseWithPostalCode<'a>> for Vec<DeliveryDate<'a>> {
-    fn from(value: ApiResponseWithPostalCode<'a>) -> Self {
+impl From<ApiResponseWithPostalCode> for Vec<DeliveryDate> {
+    fn from(value: ApiResponseWithPostalCode) -> Self {
         value
             .response
             .delivery_dates
@@ -79,9 +79,9 @@ impl DeliveryDays {
 
     /// Get a list of delivery dates.
     #[allow(clippy::missing_errors_doc)]
-    pub async fn get<'a>(
-        &'a self,
-        postal_code: &'a NorwegianPostalCode,
+    pub async fn get(
+        &self,
+        postal_code: NorwegianPostalCode,
     ) -> Result<Vec<DeliveryDate>, Box<dyn std::error::Error>> {
         let response: ApiResponse = match self {
             Self::Api(client) => {

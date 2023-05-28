@@ -29,20 +29,20 @@ fn weekday(date: NaiveDate) -> &'static str {
     }
 }
 
-pub struct Calendar<'a> {
-    delivery_dates: Vec<DeliveryDate<'a>>,
+pub struct Calendar {
+    delivery_dates: Vec<DeliveryDate>,
     created: Option<DateTime<Utc>>,
 }
 
-impl<'a> From<Vec<DeliveryDate<'a>>> for Calendar<'a> {
-    fn from(value: Vec<DeliveryDate<'a>>) -> Self {
+impl From<Vec<DeliveryDate>> for Calendar {
+    fn from(value: Vec<DeliveryDate>) -> Self {
         Self::new(value, None)
     }
 }
 
-impl<'a> Calendar<'a> {
+impl Calendar {
     #[must_use]
-    pub fn new(delivery_dates: Vec<DeliveryDate<'a>>, created: Option<DateTime<Utc>>) -> Self {
+    pub fn new(delivery_dates: Vec<DeliveryDate>, created: Option<DateTime<Utc>>) -> Self {
         Self {
             delivery_dates,
             created,
@@ -50,7 +50,7 @@ impl<'a> Calendar<'a> {
     }
 }
 
-impl<'a> fmt::Display for Calendar<'a> {
+impl fmt::Display for Calendar {
     /// Format [`Calendar`] as an iCalendar string.
     ///
     /// ```
@@ -59,7 +59,7 @@ impl<'a> fmt::Display for Calendar<'a> {
     /// use postgang::bring_client::NorwegianPostalCode;
     /// use postgang::calendar::Calendar;
     ///
-    /// let postal_code = &NorwegianPostalCode::try_from("7800").unwrap();
+    /// let postal_code = NorwegianPostalCode::try_from("7800").unwrap();
     /// let date = NaiveDate::from_ymd_opt(1970, 8, 13).unwrap();
     /// let created = Some(DateTime::<FixedOffset>::parse_from_rfc3339("1970-08-13T00:00:00Z").unwrap().into());
     /// let delivery_dates = vec![DeliveryDate::new(postal_code, date)];

@@ -9,7 +9,7 @@ const NORWAY: &str = "no";
 const INVALID_NORWEGIAN_POST_CODE: &str =
     "Invalid postal code format for Norway. Postal code must be numeric and consist of 4 digits";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 /// Represents a norwegian postal code.
 ///
 /// Postal codes must be numeric and consist of 4 digits

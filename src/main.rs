@@ -69,11 +69,11 @@ async fn try_main() -> Result<(), Box<dyn Error>> {
             // Try to create file before we do any network requests
             let mut file =
                 std::fs::File::create(&path).map_err(|err| io_error_to_string(&err, &path))?;
-            let cal: Calendar = endpoint.get(&cli.code).await?.into();
+            let cal: Calendar = endpoint.get(cli.code).await?.into();
             write!(file, "{cal}").map_err(|err| io_error_to_string(&err, &path))?;
         }
         None => {
-            let cal: Calendar = endpoint.get(&cli.code).await?.into();
+            let cal: Calendar = endpoint.get(cli.code).await?.into();
             std::io::stdout().write_fmt(format_args!("{cal}"))?
         }
     }
