@@ -59,7 +59,6 @@ struct Cli {
 }
 
 fn try_main() -> Result<(), Box<dyn Error>> {
-    env_logger::init();
     let cli = Cli::parse();
     log::debug!("Got CLI args: {:?}", cli);
     let endpoint = match cli.command {
@@ -81,6 +80,8 @@ fn try_main() -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> ExitCode {
+    env_logger::init();
+
     match try_main() {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
