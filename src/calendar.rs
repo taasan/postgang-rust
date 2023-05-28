@@ -87,40 +87,34 @@ impl fmt::Display for Calendar {
     ///      END:VCALENDAR\r\n");
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("BEGIN:VCALENDAR\r\n")?;
-        f.write_str("VERSION:2.0\r\n")?;
-        f.write_str("PRODID:-//Aasan//Aasan Postgang//EN\r\n")?;
-        f.write_str("CALSCALE:GREGORIAN\r\n")?;
-        f.write_str("METHOD:PUBLISH\r\n")?;
+        f.write_str(
+            "BEGIN:VCALENDAR\r\n\
+                  VERSION:2.0\r\n\
+                  PRODID:-//Aasan//Aasan Postgang//EN\r\n\
+                  CALSCALE:GREGORIAN\r\n\
+                  METHOD:PUBLISH\r\n",
+        )?;
 
         for value in &self.delivery_dates {
-            f.write_str("BEGIN:VEVENT\r\n")?;
+            let date = value.date;
+            let dt_start = format_naive_date(value.date);
+            let dt_end = format_naive_date(value.date + Duration::days(1));
+            let postal_code = value.postal_code;
+            let weekday = weekday(value.date);
+            let timestamp = format_timestamp(&(self.created.unwrap_or(Utc::now())));
+            let day = date.day();
             write!(
                 f,
-                "DTEND;VALUE=DATE:{}\r\n",
-                format_naive_date(value.date + Duration::days(1))
+                "BEGIN:VEVENT\r\n\
+                 DTEND;VALUE=DATE:{dt_end}\r\n\
+                 DTSTAMP:{timestamp}\r\n\
+                 DTSTART;VALUE=DATE:{dt_start}\r\n\
+                 SUMMARY:{postal_code}: Posten kommer {weekday} {day}.\r\n\
+                 TRANSP:TRANSPARENT\r\n\
+                 UID:postgang-{postal_code}-{date}\r\n\
+                 URL:https://www.posten.no/levering-av-post/\r\n\
+                 END:VEVENT\r\n"
             )?;
-            write!(
-                f,
-                "DTSTAMP:{}\r\n",
-                format_timestamp(&(self.created.unwrap_or(Utc::now())))
-            )?;
-            write!(
-                f,
-                "DTSTART;VALUE=DATE:{}\r\n",
-                format_naive_date(value.date)
-            )?;
-            write!(
-                f,
-                "SUMMARY:{}: Posten kommer {} {}.\r\n",
-                value.postal_code,
-                weekday(value.date),
-                value.date.day()
-            )?;
-            f.write_str("TRANSP:TRANSPARENT\r\n")?;
-            write!(f, "UID:postgang-{}-{}\r\n", value.postal_code, value.date)?;
-            f.write_str("URL:https://www.posten.no/levering-av-post/\r\n")?;
-            f.write_str("END:VEVENT\r\n")?;
         }
 
         f.write_str("END:VCALENDAR\r\n")
