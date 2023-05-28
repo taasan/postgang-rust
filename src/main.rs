@@ -3,7 +3,7 @@ use git_version::git_version;
 use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
 use postgang::bring_client::{ApiKey, ApiUid};
 use postgang::bring_client::{InvalidPostalCode, NorwegianPostalCode};
-use postgang::calendar::to_calendar_string;
+use postgang::calendar::Calendar;
 use postgang::io_error_to_string;
 use std::error::Error;
 use std::io::Write;
@@ -69,17 +69,13 @@ async fn try_main() -> Result<(), Box<dyn Error>> {
             // Try to create file before we do any network requests
             let mut file =
                 std::fs::File::create(&path).map_err(|err| io_error_to_string(&err, &path))?;
-            write!(
-                file,
-                "{}",
-                to_calendar_string(endpoint.get(&cli.code).await?, None)
-            )
-            .map_err(|err| io_error_to_string(&err, &path))?;
+            let cal: Calendar = endpoint.get(&cli.code).await?.into();
+            write!(file, "{cal}").map_err(|err| io_error_to_string(&err, &path))?;
         }
-        None => print!(
-            "{}",
-            to_calendar_string(endpoint.get(&cli.code).await?, None)
-        ),
+        None => {
+            let cal: Calendar = endpoint.get(&cli.code).await?.into();
+            std::io::stdout().write_fmt(format_args!("{cal}"))?
+        }
     }
 
     Ok(())

@@ -5,6 +5,7 @@ use chrono::{
     DateTime, Datelike, Duration, NaiveDate, Utc,
     Weekday::{Fri, Mon, Sat, Sun, Thu, Tue, Wed},
 };
+use core::fmt;
 
 #[inline]
 fn format_naive_date<'a>(date: NaiveDate) -> DelayedFormat<StrftimeItems<'a>> {
@@ -28,82 +29,98 @@ fn weekday(date: NaiveDate) -> &'static str {
     }
 }
 
-#[must_use]
-/// Dump delivery dates as an iCalendar string.
-///
-/// ```
-/// use std::str::FromStr;
-/// use chrono::{DateTime, FixedOffset, NaiveDate, Utc};
-/// use postgang::bring_client::mailbox_delivery_dates::DeliveryDate;
-/// use postgang::bring_client::NorwegianPostalCode;
-/// use postgang::calendar::to_calendar_string;
-///
-/// let postal_code = &NorwegianPostalCode::try_from("7800").unwrap();
-/// let date = NaiveDate::from_ymd_opt(1970, 8, 13).unwrap();
-/// let created = DateTime::<FixedOffset>::parse_from_rfc3339("1970-08-13T00:00:00Z").unwrap().into();
-/// let delivery_dates = vec![DeliveryDate::new(postal_code, date)];
-/// let ical_str = to_calendar_string(delivery_dates, Some(created));
-///
-/// assert_eq!(
-///     ical_str,
-///     "BEGIN:VCALENDAR\r\n\
-///      VERSION:2.0\r\n\
-///      PRODID:-//Aasan//Aasan Postgang//EN\r\n\
-///      CALSCALE:GREGORIAN\r\n\
-///      METHOD:PUBLISH\r\n\
-///      BEGIN:VEVENT\r\n\
-///      DTEND;VALUE=DATE:19700814\r\n\
-///      DTSTAMP:19700813T000000Z\r\n\
-///      DTSTART;VALUE=DATE:19700813\r\n\
-///      SUMMARY:7800: Posten kommer torsdag 13.\r\n\
-///      TRANSP:TRANSPARENT\r\n\
-///      UID:postgang-7800-1970-08-13\r\n\
-///      URL:https://www.posten.no/levering-av-post/\r\n\
-///      END:VEVENT\r\n\
-///      END:VCALENDAR\r\n");
-/// ```
-pub fn to_calendar_string(
-    delivery_dates: Vec<DeliveryDate>,
+pub struct Calendar<'a> {
+    delivery_dates: Vec<DeliveryDate<'a>>,
     created: Option<DateTime<Utc>>,
-) -> String {
-    let cap = 7 + 9 * delivery_dates.len();
-    let mut buf: Vec<String> = Vec::with_capacity(cap);
-    buf.push("BEGIN:VCALENDAR".to_owned());
-    buf.push("VERSION:2.0".to_owned());
-    buf.push("PRODID:-//Aasan//Aasan Postgang//EN".to_owned());
-    buf.push("CALSCALE:GREGORIAN".to_owned());
-    buf.push("METHOD:PUBLISH".to_owned());
-    for value in delivery_dates {
-        buf.push("BEGIN:VEVENT".to_owned());
-        buf.push(format!(
-            "DTEND;VALUE=DATE:{}",
-            format_naive_date(value.date + Duration::days(1))
-        ));
-        buf.push(format!(
-            "DTSTAMP:{}",
-            format_timestamp(&(created.unwrap_or(Utc::now())))
-        ));
-        buf.push(format!(
-            "DTSTART;VALUE=DATE:{}",
-            format_naive_date(value.date)
-        ));
-        buf.push(format!(
-            "SUMMARY:{}: Posten kommer {} {}.",
-            value.postal_code,
-            weekday(value.date),
-            value.date.day()
-        ));
-        buf.push("TRANSP:TRANSPARENT".to_owned());
-        buf.push(format!("UID:postgang-{}-{}", value.postal_code, value.date));
-        buf.push("URL:https://www.posten.no/levering-av-post/".to_owned());
-        buf.push("END:VEVENT".to_owned());
+}
+
+impl<'a> From<Vec<DeliveryDate<'a>>> for Calendar<'a> {
+    fn from(value: Vec<DeliveryDate<'a>>) -> Self {
+        Self::new(value, None)
     }
-    buf.push("END:VCALENDAR".to_owned());
-    buf.push(String::new());
-    debug_assert!(
-        buf.iter().all(|line| line.len() <= 75),
-        "Some lines ecceed 75 bytes, implement line folding?"
-    );
-    debug_assert_eq!(cap, buf.len(), "String buffer initial capacity is wrong");
-    buf.join("\r\n")
+}
+
+impl<'a> Calendar<'a> {
+    #[must_use]
+    pub fn new(delivery_dates: Vec<DeliveryDate<'a>>, created: Option<DateTime<Utc>>) -> Self {
+        Self {
+            delivery_dates,
+            created,
+        }
+    }
+}
+
+impl<'a> fmt::Display for Calendar<'a> {
+    /// Format [`Calendar`] as an iCalendar string.
+    ///
+    /// ```
+    /// use chrono::{DateTime, FixedOffset, NaiveDate, Utc};
+    /// use postgang::bring_client::mailbox_delivery_dates::DeliveryDate;
+    /// use postgang::bring_client::NorwegianPostalCode;
+    /// use postgang::calendar::Calendar;
+    ///
+    /// let postal_code = &NorwegianPostalCode::try_from("7800").unwrap();
+    /// let date = NaiveDate::from_ymd_opt(1970, 8, 13).unwrap();
+    /// let created = Some(DateTime::<FixedOffset>::parse_from_rfc3339("1970-08-13T00:00:00Z").unwrap().into());
+    /// let delivery_dates = vec![DeliveryDate::new(postal_code, date)];
+    /// let calendar = Calendar::new(delivery_dates, created);
+    /// let ical_str = calendar.to_string();
+    ///
+    /// assert_eq!(
+    ///     ical_str,
+    ///     "BEGIN:VCALENDAR\r\n\
+    ///      VERSION:2.0\r\n\
+    ///      PRODID:-//Aasan//Aasan Postgang//EN\r\n\
+    ///      CALSCALE:GREGORIAN\r\n\
+    ///      METHOD:PUBLISH\r\n\
+    ///      BEGIN:VEVENT\r\n\
+    ///      DTEND;VALUE=DATE:19700814\r\n\
+    ///      DTSTAMP:19700813T000000Z\r\n\
+    ///      DTSTART;VALUE=DATE:19700813\r\n\
+    ///      SUMMARY:7800: Posten kommer torsdag 13.\r\n\
+    ///      TRANSP:TRANSPARENT\r\n\
+    ///      UID:postgang-7800-1970-08-13\r\n\
+    ///      URL:https://www.posten.no/levering-av-post/\r\n\
+    ///      END:VEVENT\r\n\
+    ///      END:VCALENDAR\r\n");
+    /// ```
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("BEGIN:VCALENDAR\r\n")?;
+        f.write_str("VERSION:2.0\r\n")?;
+        f.write_str("PRODID:-//Aasan//Aasan Postgang//EN\r\n")?;
+        f.write_str("CALSCALE:GREGORIAN\r\n")?;
+        f.write_str("METHOD:PUBLISH\r\n")?;
+
+        for value in &self.delivery_dates {
+            f.write_str("BEGIN:VEVENT\r\n")?;
+            write!(
+                f,
+                "DTEND;VALUE=DATE:{}\r\n",
+                format_naive_date(value.date + Duration::days(1))
+            )?;
+            write!(
+                f,
+                "DTSTAMP:{}\r\n",
+                format_timestamp(&(self.created.unwrap_or(Utc::now())))
+            )?;
+            write!(
+                f,
+                "DTSTART;VALUE=DATE:{}\r\n",
+                format_naive_date(value.date)
+            )?;
+            write!(
+                f,
+                "SUMMARY:{}: Posten kommer {} {}.\r\n",
+                value.postal_code,
+                weekday(value.date),
+                value.date.day()
+            )?;
+            f.write_str("TRANSP:TRANSPARENT\r\n")?;
+            write!(f, "UID:postgang-{}-{}\r\n", value.postal_code, value.date)?;
+            f.write_str("URL:https://www.posten.no/levering-av-post/\r\n")?;
+            f.write_str("END:VEVENT\r\n")?;
+        }
+
+        f.write_str("END:VCALENDAR\r\n")
+    }
 }
