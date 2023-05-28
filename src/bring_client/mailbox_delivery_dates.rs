@@ -14,9 +14,9 @@ use std::path::PathBuf;
 #[derive(Debug)]
 /// Represents a mailbox delivery date for a specific postal code.
 pub struct DeliveryDate<'a> {
-    pub(crate) postal_code: &'a NorwegianPostalCode,
-    pub(crate) date: NaiveDate,
-    pub(crate) created: DateTime<Utc>,
+    pub postal_code: &'a NorwegianPostalCode,
+    pub date: NaiveDate,
+    pub created: DateTime<Utc>,
 }
 
 impl<'a> DeliveryDate<'a> {
