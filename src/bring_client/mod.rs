@@ -1,7 +1,6 @@
 //! Client for the [Bring postal code API](https://developer.bring.com/api/postal-code/).
 use core::fmt::{self, Debug, Display};
 use reqwest::header::HeaderValue;
-use std::error::Error;
 
 const HEADER_UID: &str = "X-Mybring-API-Uid";
 const HEADER_KEY: &str = "X-Mybring-API-Key";
@@ -32,8 +31,6 @@ impl Display for InvalidPostalCode {
         f.write_str(self.0)
     }
 }
-
-impl Error for InvalidPostalCode {}
 
 impl<'a> TryFrom<&'a str> for NorwegianPostalCode {
     type Error = InvalidPostalCode;

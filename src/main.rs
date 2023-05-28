@@ -1,8 +1,8 @@
 use clap::Parser as ClapParser;
 use git_version::git_version;
 use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
+use postgang::bring_client::NorwegianPostalCode;
 use postgang::bring_client::{ApiKey, ApiUid};
-use postgang::bring_client::{InvalidPostalCode, NorwegianPostalCode};
 use postgang::calendar::Calendar;
 use postgang::io_error_to_string;
 use std::error::Error;
@@ -16,8 +16,8 @@ const VERSION: &str = git_version!(
     fallback = "unknown"
 );
 
-fn postal_code_parser(value: &str) -> Result<NorwegianPostalCode, InvalidPostalCode> {
-    NorwegianPostalCode::try_from(value)
+fn postal_code_parser(value: &str) -> Result<NorwegianPostalCode, String> {
+    NorwegianPostalCode::try_from(value).map_err(|err| err.to_string())
 }
 
 fn parse_api_key(value: &str) -> Result<ApiKey, String> {
