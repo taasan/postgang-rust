@@ -17,16 +17,14 @@ const INVALID_NORWEGIAN_POST_CODE: &str =
 /// ```
 /// use postgang::bring_client::NorwegianPostalCode;
 /// let postal_code = NorwegianPostalCode::try_from("0001").unwrap();
-/// assert_eq!(format!("{}", postal_code), "0001");
-/// ```
-/// ```rust,should_panic
-/// use postgang::bring_client::NorwegianPostalCode;
-/// NorwegianPostalCode::try_from("10000").unwrap();
+/// assert_eq!(postal_code.to_string(), "0001");
+/// assert!(NorwegianPostalCode::try_from("10000").is_err());
+/// assert!(NorwegianPostalCode::try_from("999").is_err());
 /// ```
 pub struct NorwegianPostalCode(u16);
 
 #[derive(Debug)]
-/// A possible error when converting a `PostalCode` from a string.
+/// A possible error when converting a [`NorwegianPostalCode`] from a string.
 pub struct InvalidPostalCode(&'static str);
 
 impl Display for InvalidPostalCode {
@@ -58,20 +56,14 @@ impl Display for NorwegianPostalCode {
 }
 
 #[derive(Clone)]
-/// API key to be used by the API client.
-pub struct ApiKey(pub HeaderValue);
+/// API key to be used by the HTTP client.
+///
+/// The header is marked sensitive as to not leak secrets in log output.
+pub struct ApiKey(HeaderValue);
 
 impl ApiKey {
     #[must_use]
-    /// Create a new `ApiKey` from `HeaderValue`.
-    ///
-    /// The header is marked sensitive as to not leak secrets in log output.
-    ///
-    /// ```
-    /// use postgang::bring_client::ApiKey;
-    /// let value = ApiKey::try_from("secret value").unwrap();
-    /// assert_eq!(format!("{:?}", value), "ApiKey(Sensitive)");
-    /// ```
+    /// Create a new [`ApiKey`] from [`HeaderValue`].
     fn new(value: HeaderValue) -> Self {
         if value.is_sensitive() {
             Self(value)
@@ -110,12 +102,15 @@ mod test {
 }
 
 #[derive(Debug)]
+/// A possible error when converting an [`ApiKey`] from a string.
 pub struct InvalidApiKey;
 
 #[derive(Debug, Clone)]
+/// API user id to be used by the HTTP client.
 pub struct ApiUid(HeaderValue);
 
 #[derive(Debug)]
+/// A possible error when converting an [`ApiUid`] from a string.
 pub struct InvalidApiUid;
 
 impl TryFrom<&str> for ApiUid {
