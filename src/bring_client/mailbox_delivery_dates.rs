@@ -1,16 +1,19 @@
 //! Mailbox delivery dates API.
 
-use super::ApiKey;
-use super::NorwegianPostalCode;
-use super::NORWAY;
-use crate::bring_client::ApiUid;
-use crate::io_error_to_string;
-use chrono::NaiveDate;
 use core::fmt::Debug;
-use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::Client;
-use serde::Deserialize;
 use std::path::PathBuf;
+
+use chrono::NaiveDate;
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    Client,
+};
+use serde::Deserialize;
+
+use crate::{
+    bring_client::{ApiKey, ApiUid, NorwegianPostalCode, NORWAY},
+    io_error_to_string,
+};
 
 #[derive(Debug)]
 /// Represents a mailbox delivery date for a specific postal code.

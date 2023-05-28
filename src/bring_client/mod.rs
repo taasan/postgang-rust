@@ -1,5 +1,6 @@
 //! Client for the [Bring postal code API](https://developer.bring.com/api/postal-code/).
 use core::fmt::{self, Debug, Display};
+
 use reqwest::header::HeaderValue;
 
 const HEADER_UID: &str = "X-Mybring-API-Uid";

@@ -1,14 +1,13 @@
+use std::{error::Error, io::Write, path::PathBuf, process::ExitCode};
+
 use clap::Parser as ClapParser;
 use git_version::git_version;
-use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
-use postgang::bring_client::NorwegianPostalCode;
-use postgang::bring_client::{ApiKey, ApiUid};
-use postgang::calendar::Calendar;
-use postgang::io_error_to_string;
-use std::error::Error;
-use std::io::Write;
-use std::path::PathBuf;
-use std::process::ExitCode;
+
+use postgang::{
+    bring_client::{mailbox_delivery_dates::DeliveryDays, ApiKey, ApiUid, NorwegianPostalCode},
+    calendar::Calendar,
+    io_error_to_string,
+};
 
 const VERSION: &str = git_version!(
     prefix = "git:",

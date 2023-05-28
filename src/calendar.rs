@@ -1,11 +1,13 @@
 //! iCalendar generator
-use super::bring_client::mailbox_delivery_dates::DeliveryDate;
+use core::fmt;
+
 use chrono::{
     format::{DelayedFormat, StrftimeItems},
     DateTime, Datelike, Duration, NaiveDate, Utc,
     Weekday::{Fri, Mon, Sat, Sun, Thu, Tue, Wed},
 };
-use core::fmt;
+
+use crate::bring_client::mailbox_delivery_dates::DeliveryDate;
 
 #[inline]
 fn format_naive_date<'a>(date: NaiveDate) -> DelayedFormat<StrftimeItems<'a>> {
