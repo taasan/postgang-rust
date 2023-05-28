@@ -57,7 +57,7 @@ struct Cli {
     output: Option<PathBuf>,
 }
 
-fn try_main() -> Result<(), Box<dyn Error>> {
+async fn try_main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     log::debug!("Got CLI args: {:?}", cli);
     let endpoint = match cli.command {
@@ -69,19 +69,24 @@ fn try_main() -> Result<(), Box<dyn Error>> {
             // Try to create file before we do any network requests
             let mut file =
                 std::fs::File::create(&path).map_err(|err| io_error_to_string(&err, &path))?;
-            write!(file, "{}", to_calendar_string(endpoint.get(&cli.code)?))
-                .map_err(|err| io_error_to_string(&err, &path))?;
+            write!(
+                file,
+                "{}",
+                to_calendar_string(endpoint.get(&cli.code).await?)
+            )
+            .map_err(|err| io_error_to_string(&err, &path))?;
         }
-        None => print!("{}", to_calendar_string(endpoint.get(&cli.code)?)),
+        None => print!("{}", to_calendar_string(endpoint.get(&cli.code).await?)),
     }
 
     Ok(())
 }
 
-fn main() -> ExitCode {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> ExitCode {
     env_logger::init();
 
-    match try_main() {
+    match try_main().await {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
             log::error!("{err}");

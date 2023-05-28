@@ -7,8 +7,8 @@ use crate::bring_client::ApiUid;
 use crate::io_error_to_string;
 use chrono::{DateTime, NaiveDate, Utc};
 use core::fmt::Debug;
-use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::Client;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -89,7 +89,7 @@ impl DeliveryDays {
 
     /// Get a list of delivery dates.
     #[allow(clippy::missing_errors_doc)]
-    pub fn get<'a>(
+    pub async fn get<'a>(
         &'a self,
         postal_code: &'a NorwegianPostalCode,
     ) -> Result<Vec<DeliveryDate>, Box<dyn std::error::Error>> {
@@ -99,11 +99,11 @@ impl DeliveryDays {
                     "https://api.bring.com/address/api/{NORWAY}/postal-codes/{postal_code}/mailbox-delivery-dates"
                 );
                 log::debug!("Using URL: {url}");
-                let resp = client.get(&url).send()?;
+                let resp = client.get(&url).send().await?;
                 log::debug!("Got response status: {}", resp.status());
                 log::trace!("{:?}", resp);
                 resp.error_for_status_ref()?;
-                resp.json::<ApiResponse>()?
+                resp.json::<ApiResponse>().await?
             }
             Self::File(path) => {
                 log::debug!("Reading from file: {:?}", path);
