@@ -1,11 +1,10 @@
 use clap::Parser as ClapParser;
 use git_version::git_version;
 use postgang::bring_client::mailbox_delivery_dates::DeliveryDays;
-use postgang::bring_client::ApiKey;
+use postgang::bring_client::{ApiKey, ApiUid};
 use postgang::bring_client::{InvalidPostalCode, NorwegianPostalCode};
 use postgang::calendar::to_calendar_string;
 use postgang::io_error_to_string;
-use reqwest::header::{HeaderValue, InvalidHeaderValue};
 use std::error::Error;
 use std::io::Write;
 use std::path::PathBuf;
@@ -21,21 +20,21 @@ fn postal_code_parser(value: &str) -> Result<NorwegianPostalCode, InvalidPostalC
     NorwegianPostalCode::try_from(value)
 }
 
-fn parse_secret(value: &str) -> Result<ApiKey, InvalidHeaderValue> {
-    Ok(ApiKey::new(HeaderValue::from_str(value)?))
+fn parse_api_key(value: &str) -> Result<ApiKey, String> {
+    ApiKey::try_from(value).map_err(|err| format!("{:?}", err))
 }
 
-fn parse_header_value(value: &str) -> Result<HeaderValue, InvalidHeaderValue> {
-    HeaderValue::from_str(value)
+fn parse_api_uid(value: &str) -> Result<ApiUid, String> {
+    ApiUid::try_from(value).map_err(|err| format!("{:?}", err))
 }
 
 #[derive(ClapParser, Debug)]
 enum Commands {
     /// Get delivery dates from Bring API
     Api {
-        #[arg(long, env = "POSTGANG_API_UID", value_parser = parse_header_value, hide_env_values = true)]
-        api_uid: HeaderValue,
-        #[arg(long, env = "POSTGANG_API_KEY", value_parser = parse_secret, hide_env_values = true)]
+        #[arg(long, env = "POSTGANG_API_UID", value_parser = parse_api_uid, hide_env_values = true)]
+        api_uid: ApiUid,
+        #[arg(long, env = "POSTGANG_API_KEY", value_parser = parse_api_key, hide_env_values = true)]
         api_key: ApiKey,
     },
     /// Get delivery dates from JSON file

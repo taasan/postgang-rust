@@ -59,7 +59,7 @@ impl Display for NorwegianPostalCode {
 
 #[derive(Clone)]
 /// API key to be used by the API client.
-pub struct ApiKey(HeaderValue);
+pub struct ApiKey(pub HeaderValue);
 
 impl ApiKey {
     #[must_use]
@@ -68,12 +68,11 @@ impl ApiKey {
     /// The header is marked sensitive as to not leak secrets in log output.
     ///
     /// ```
-    /// use reqwest::header::{HeaderMap, HeaderValue};
     /// use postgang::bring_client::ApiKey;
-    /// let value = ApiKey::new(HeaderValue::from_static("secret value"));
+    /// let value = ApiKey::try_from("secret value").unwrap();
     /// assert_eq!(format!("{:?}", value), "ApiKey(Sensitive)");
     /// ```
-    pub fn new(value: HeaderValue) -> Self {
+    fn new(value: HeaderValue) -> Self {
         if value.is_sensitive() {
             Self(value)
         } else {
@@ -87,6 +86,45 @@ impl ApiKey {
 impl Debug for ApiKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("ApiKey").field(&self.0).finish()
+    }
+}
+
+impl TryFrom<&str> for ApiKey {
+    type Error = InvalidApiKey;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(Self::new(
+            HeaderValue::from_str(value).map_err(|_| InvalidApiKey)?,
+        ))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::ApiKey;
+
+    #[test]
+    fn test_api_key_try_from_str() {
+        let x = ApiKey::try_from("aaaa").unwrap();
+        assert!(x.0.is_sensitive());
+    }
+}
+
+#[derive(Debug)]
+pub struct InvalidApiKey;
+
+#[derive(Debug, Clone)]
+pub struct ApiUid(HeaderValue);
+
+#[derive(Debug)]
+pub struct InvalidApiUid;
+
+impl TryFrom<&str> for ApiUid {
+    type Error = InvalidApiUid;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(Self(
+            HeaderValue::from_str(value).map_err(|_| InvalidApiUid)?,
+        ))
     }
 }
 
