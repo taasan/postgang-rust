@@ -15,7 +15,7 @@ use crate::{
     io_error_to_string,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 /// Represents a mailbox delivery date for a specific postal code.
 pub struct DeliveryDate {
     pub postal_code: NorwegianPostalCode,
