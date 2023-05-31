@@ -140,6 +140,9 @@ mod content_line {
 
     impl fmt::Display for ContentLine {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            if self.0.is_empty() {
+                return Ok(());
+            }
             let content = self.0.replace('\n', "\\n");
             let mut content = content.as_str();
             let mut boundary = next_boundary(&ContentLineToPrint::First(content));
@@ -160,15 +163,15 @@ mod content_line {
         Begin,
         Version,
         ProdId,
-        Calscale,
+        CalScale,
         Method,
     }
 
     #[derive(Debug, Clone)]
     enum CalendarIteratorState {
         Preamble(PreambleState),
-        PreambleEnd,
-        Content(u8, DeliveryDateIterator),
+        StartEvent(u8),
+        Event(u8, DeliveryDateIterator),
         Done,
     }
 
@@ -203,29 +206,29 @@ mod content_line {
                         (Some("VERSION:2.0".into()), None)
                     }
                     PreambleState::ProdId => {
-                        *x = PreambleState::Calscale;
+                        *x = PreambleState::CalScale;
                         (Some("PRODID:-//Aasan//Aasan Postgang//EN".into()), None)
                     }
-                    PreambleState::Calscale => {
+                    PreambleState::CalScale => {
                         *x = PreambleState::Method;
                         (Some("CALSCALE:GREGORIAN".into()), None)
                     }
                     PreambleState::Method => (
                         Some("METHOD:PUBLISH".into()),
-                        Some(CalendarIteratorState::PreambleEnd),
+                        Some(CalendarIteratorState::StartEvent(0)),
                     ),
                 },
-                CalendarIteratorState::PreambleEnd => {
-                    if let Some(delivery_date) = self.calendar.delivery_dates.get(0) {
-                        let mut iterator =
-                            DeliveryDateIterator::new(*delivery_date, self.calendar.created);
-                        match iterator.next() {
-                            None => (
-                                Some("END:VCALENDAR".into()),
-                                Some(CalendarIteratorState::Done),
-                            ),
-                            x => (x, Some(CalendarIteratorState::Content(0, iterator))),
-                        }
+                CalendarIteratorState::StartEvent(index) => {
+                    if let Some(mut iterator) = self
+                        .calendar
+                        .delivery_dates
+                        .get(usize::from(*index))
+                        .map(|x| DeliveryDateIterator::new(*x, self.calendar.created))
+                    {
+                        (
+                            iterator.next(),
+                            Some(CalendarIteratorState::Event(*index, iterator)),
+                        )
                     } else {
                         (
                             Some("END:VCALENDAR".into()),
@@ -233,31 +236,13 @@ mod content_line {
                         )
                     }
                 }
-                CalendarIteratorState::Content(index, iterator) => {
-                    let index = *index + 1;
-                    match iterator.next() {
-                        None => {
-                            if let Some(delivery_date) =
-                                self.calendar.delivery_dates.get(usize::from(index))
-                            {
-                                let mut iterator = DeliveryDateIterator::new(
-                                    *delivery_date,
-                                    self.calendar.created,
-                                );
-                                (
-                                    iterator.next(),
-                                    Some(CalendarIteratorState::Content(index, iterator)),
-                                )
-                            } else {
-                                (
-                                    Some("END:VCALENDAR".into()),
-                                    Some(CalendarIteratorState::Done),
-                                )
-                            }
-                        }
-                        x => (x, None),
-                    }
-                }
+                CalendarIteratorState::Event(index, iterator) => match iterator.next() {
+                    None => (
+                        Some("".into()),
+                        Some(CalendarIteratorState::StartEvent(*index + 1)),
+                    ),
+                    x => (x, None),
+                },
                 CalendarIteratorState::Done => (None, None),
             };
             if let Some(s) = next_state {
@@ -372,5 +357,11 @@ mod content_line {
     fn test_output_line_display_newline() {
         let line = ContentLine::from("A\nnna");
         assert_eq!(format!("{line}"), "A\\nnna\r\n");
+    }
+
+    #[test]
+    fn test_output_line_display_empty() {
+        let line = ContentLine::from("");
+        assert_eq!(format!("{line}"), "");
     }
 }
