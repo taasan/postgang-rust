@@ -252,11 +252,44 @@ mod content_line {
         }
     }
 
+    #[derive(Debug, Clone, Copy)]
+    enum DeliveryDateIteratorState {
+        Begin,
+        DtEnd,
+        DtStamp,
+        DtStart,
+        Summary,
+        Transp,
+        Uid,
+        Url,
+        End,
+        Done,
+    }
+
+    impl DeliveryDateIteratorState {
+        fn next(self) -> Self {
+            use DeliveryDateIteratorState::{
+                Begin, Done, DtEnd, DtStamp, DtStart, End, Summary, Transp, Uid, Url,
+            };
+            match self {
+                Begin => DtEnd,
+                DtEnd => DtStamp,
+                DtStamp => DtStart,
+                DtStart => Summary,
+                Summary => Transp,
+                Transp => Uid,
+                Uid => Url,
+                Url => End,
+                End | Done => Done,
+            }
+        }
+    }
+
     #[derive(Debug, Clone)]
     struct DeliveryDateIterator {
         delivery_date: DeliveryDate,
         created: Option<DateTime<Utc>>,
-        line_no: u8,
+        state: DeliveryDateIteratorState,
     }
 
     impl DeliveryDateIterator {
@@ -265,7 +298,7 @@ mod content_line {
             Self {
                 delivery_date,
                 created,
-                line_no: 0,
+                state: DeliveryDateIteratorState::Begin,
             }
         }
     }
@@ -274,38 +307,42 @@ mod content_line {
         type Item = ContentLine;
 
         fn next(&mut self) -> Option<Self::Item> {
-            self.line_no += 1;
+            use DeliveryDateIteratorState::{
+                Begin, Done, DtEnd, DtStamp, DtStart, End, Summary, Transp, Uid, Url,
+            };
             let value = &self.delivery_date;
-            match self.line_no {
-                1 => Some("BEGIN:VEVENT".into()),
-                2 => {
+            let res = match self.state {
+                Begin => Some("BEGIN:VEVENT".into()),
+                DtEnd => {
                     let dt_end = format_naive_date(value.date + Duration::days(1));
                     Some(format!("DTEND;VALUE=DATE:{dt_end}").into())
                 }
-                3 => {
+                DtStamp => {
                     let timestamp = format_timestamp(&(self.created.unwrap_or(Utc::now())));
                     Some(format!("DTSTAMP:{timestamp}").into())
                 }
-                4 => {
+                DtStart => {
                     let dt_start = format_naive_date(value.date);
                     Some(format!("DTSTART;VALUE=DATE:{dt_start}").into())
                 }
-                5 => {
+                Summary => {
                     let postal_code = value.postal_code;
                     let weekday = weekday(value.date);
                     let day = value.date.day();
                     Some(format!("SUMMARY:{postal_code}: Posten kommer {weekday} {day}.").into())
                 }
-                6 => Some("TRANSP:TRANSPARENT".into()),
-                7 => {
+                Transp => Some("TRANSP:TRANSPARENT".into()),
+                Uid => {
                     let date = value.date;
                     let postal_code = value.postal_code;
                     Some(format!("UID:postgang-{postal_code}-{date}").into())
                 }
-                8 => Some("URL:https://www.posten.no/levering-av-post/".into()),
-                9 => Some("END:VEVENT".into()),
-                _ => None,
-            }
+                Url => Some("URL:https://www.posten.no/levering-av-post/".into()),
+                End => Some("END:VEVENT".into()),
+                Done => None,
+            };
+            self.state = self.state.next();
+            res
         }
     }
 
