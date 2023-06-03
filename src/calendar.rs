@@ -342,8 +342,10 @@ mod content_line {
                 End => Some("END:VEVENT".into()),
                 Done => None,
             };
-            if let Some(s) = self.state.next() {
-                self.state = s;
+            if res.is_some() {
+                if let Some(s) = self.state.next() {
+                    self.state = s;
+                }
             }
             res
         }
