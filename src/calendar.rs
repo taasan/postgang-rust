@@ -267,20 +267,21 @@ mod content_line {
     }
 
     impl DeliveryDateIteratorState {
-        fn next(self) -> Self {
+        fn next(self) -> Option<Self> {
             use DeliveryDateIteratorState::{
                 Begin, Done, DtEnd, DtStamp, DtStart, End, Summary, Transp, Uid, Url,
             };
             match self {
-                Begin => DtEnd,
-                DtEnd => DtStamp,
-                DtStamp => DtStart,
-                DtStart => Summary,
-                Summary => Transp,
-                Transp => Uid,
-                Uid => Url,
-                Url => End,
-                End | Done => Done,
+                Begin => Some(DtEnd),
+                DtEnd => Some(DtStamp),
+                DtStamp => Some(DtStart),
+                DtStart => Some(Summary),
+                Summary => Some(Transp),
+                Transp => Some(Uid),
+                Uid => Some(Url),
+                Url => Some(End),
+                End => Some(Done),
+                Done => None,
             }
         }
     }
@@ -341,7 +342,9 @@ mod content_line {
                 End => Some("END:VEVENT".into()),
                 Done => None,
             };
-            self.state = self.state.next();
+            if let Some(s) = self.state.next() {
+                self.state = s;
+            }
             res
         }
     }
