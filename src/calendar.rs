@@ -276,21 +276,32 @@ mod content_line {
         fn next(&mut self) -> Option<Self::Item> {
             self.line_no += 1;
             let value = &self.delivery_date;
-            let date = value.date;
-            let dt_start = format_naive_date(value.date);
-            let dt_end = format_naive_date(value.date + Duration::days(1));
-            let postal_code = value.postal_code;
-            let weekday = weekday(value.date);
-            let timestamp = format_timestamp(&(self.created.unwrap_or(Utc::now())));
-            let day = date.day();
             match self.line_no {
                 1 => Some("BEGIN:VEVENT".into()),
-                2 => Some(format!("DTEND;VALUE=DATE:{dt_end}").into()),
-                3 => Some(format!("DTSTAMP:{timestamp}").into()),
-                4 => Some(format!("DTSTART;VALUE=DATE:{dt_start}").into()),
-                5 => Some(format!("SUMMARY:{postal_code}: Posten kommer {weekday} {day}.").into()),
+                2 => {
+                    let dt_end = format_naive_date(value.date + Duration::days(1));
+                    Some(format!("DTEND;VALUE=DATE:{dt_end}").into())
+                }
+                3 => {
+                    let timestamp = format_timestamp(&(self.created.unwrap_or(Utc::now())));
+                    Some(format!("DTSTAMP:{timestamp}").into())
+                }
+                4 => {
+                    let dt_start = format_naive_date(value.date);
+                    Some(format!("DTSTART;VALUE=DATE:{dt_start}").into())
+                }
+                5 => {
+                    let postal_code = value.postal_code;
+                    let weekday = weekday(value.date);
+                    let day = value.date.day();
+                    Some(format!("SUMMARY:{postal_code}: Posten kommer {weekday} {day}.").into())
+                }
                 6 => Some("TRANSP:TRANSPARENT".into()),
-                7 => Some(format!("UID:postgang-{postal_code}-{date}").into()),
+                7 => {
+                    let date = value.date;
+                    let postal_code = value.postal_code;
+                    Some(format!("UID:postgang-{postal_code}-{date}").into())
+                }
                 8 => Some("URL:https://www.posten.no/levering-av-post/".into()),
                 9 => Some("END:VEVENT".into()),
                 _ => None,
