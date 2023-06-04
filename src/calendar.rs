@@ -9,7 +9,7 @@ use chrono::{
 
 use crate::bring_client::mailbox_delivery_dates::DeliveryDate;
 
-use self::content_line::CalendarIterator;
+use self::content_line::{CalendarIterator, ContentLine};
 
 #[inline]
 fn format_naive_date<'a>(date: NaiveDate) -> DelayedFormat<StrftimeItems<'a>> {
@@ -40,7 +40,7 @@ pub struct Calendar {
 }
 
 impl Calendar {
-    fn iter(&self) -> CalendarIterator {
+    fn content_lines(&self) -> impl Iterator<Item = ContentLine> {
         CalendarIterator::new(self.clone())
     }
 }
@@ -107,7 +107,7 @@ impl fmt::Display for Calendar {
     ///      END:VCALENDAR\r\n");
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for content_line in self.iter() {
+        for content_line in self.content_lines() {
             content_line.fmt(f)?;
         }
         Ok(())
@@ -123,7 +123,7 @@ mod content_line {
         format_naive_date, format_timestamp, weekday, Calendar, DateTime, Datelike, Duration, Utc,
     };
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub(super) struct ContentLine(String);
 
     impl From<&str> for ContentLine {
@@ -158,7 +158,7 @@ mod content_line {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     enum PreambleState {
         Begin,
         Version,
@@ -167,7 +167,7 @@ mod content_line {
         Method,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     enum CalendarIteratorState {
         Preamble(PreambleState),
         StartEvent(u8),
@@ -252,7 +252,7 @@ mod content_line {
         }
     }
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone)]
     enum DeliveryDateIteratorState {
         Begin,
         DtEnd,
@@ -286,7 +286,7 @@ mod content_line {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     struct DeliveryDateIterator {
         delivery_date: DeliveryDate,
         created: Option<DateTime<Utc>>,
@@ -311,11 +311,10 @@ mod content_line {
             use DeliveryDateIteratorState::{
                 Begin, Done, DtEnd, DtStamp, DtStart, End, Summary, Transp, Uid, Url,
             };
-            let value = &self.delivery_date;
             let res = match self.state {
                 Begin => Some("BEGIN:VEVENT".into()),
                 DtEnd => {
-                    let dt_end = format_naive_date(value.date + Duration::days(1));
+                    let dt_end = format_naive_date(self.delivery_date.date + Duration::days(1));
                     Some(format!("DTEND;VALUE=DATE:{dt_end}").into())
                 }
                 DtStamp => {
@@ -323,19 +322,19 @@ mod content_line {
                     Some(format!("DTSTAMP:{timestamp}").into())
                 }
                 DtStart => {
-                    let dt_start = format_naive_date(value.date);
+                    let dt_start = format_naive_date(self.delivery_date.date);
                     Some(format!("DTSTART;VALUE=DATE:{dt_start}").into())
                 }
                 Summary => {
-                    let postal_code = value.postal_code;
-                    let weekday = weekday(value.date);
-                    let day = value.date.day();
+                    let postal_code = self.delivery_date.postal_code;
+                    let weekday = weekday(self.delivery_date.date);
+                    let day = self.delivery_date.date.day();
                     Some(format!("SUMMARY:{postal_code}: Posten kommer {weekday} {day}.").into())
                 }
                 Transp => Some("TRANSP:TRANSPARENT".into()),
                 Uid => {
-                    let date = value.date;
-                    let postal_code = value.postal_code;
+                    let date = self.delivery_date.date;
+                    let postal_code = self.delivery_date.postal_code;
                     Some(format!("UID:postgang-{postal_code}-{date}").into())
                 }
                 Url => Some("URL:https://www.posten.no/levering-av-post/".into()),
@@ -343,7 +342,8 @@ mod content_line {
                 Done => None,
             };
             if res.is_some() {
-                if let Some(s) = self.state.next() {
+                let state = self.state.clone();
+                if let Some(s) = state.next() {
                     self.state = s;
                 }
             }
