@@ -52,7 +52,7 @@ struct Cli {
     /// Postal code
     code: NorwegianPostalCode,
     #[arg(long)]
-    /// File path
+    /// File path, print to stdout if omitted
     output: Option<PathBuf>,
 }
 

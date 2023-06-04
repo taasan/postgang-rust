@@ -15,7 +15,7 @@ Commands:
 
 Options:
       --code <CODE>      Postal code
-      --output <OUTPUT>  File path
+      --output <OUTPUT>  File path, print to stdout if omitted
   -h, --help             Print help
   -V, --version          Print version
 ```
