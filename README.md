@@ -38,10 +38,10 @@ Options:
 ```
 Get delivery dates from JSON file
 
-Usage: postgang --code <CODE> file <INPUT>
+Usage: postgang --code <CODE> file [INPUT]
 
 Arguments:
-  <INPUT>  File path
+  [INPUT]  File path, read from stdin of omitted
 
 Options:
   -h, --help  Print help

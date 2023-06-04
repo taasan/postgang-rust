@@ -38,8 +38,8 @@ enum Commands {
     },
     /// Get delivery dates from JSON file
     File {
-        /// File path
-        input: PathBuf,
+        /// File path, read from stdin of omitted
+        input: Option<PathBuf>,
     },
 }
 

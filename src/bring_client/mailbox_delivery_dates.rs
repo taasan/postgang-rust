@@ -58,7 +58,7 @@ pub enum DeliveryDays {
     Api(Client),
 
     /// Reads JSON from a file.
-    File(PathBuf),
+    File(Option<PathBuf>),
 }
 
 impl DeliveryDays {
@@ -76,7 +76,7 @@ impl DeliveryDays {
 
     #[must_use]
     /// Read dates from file.
-    pub fn file(path: PathBuf) -> Self {
+    pub fn file(path: Option<PathBuf>) -> Self {
         Self::File(path)
     }
 
@@ -98,11 +98,15 @@ impl DeliveryDays {
                 resp.error_for_status_ref()?;
                 resp.json::<ApiResponse>().await?
             }
-            Self::File(path) => {
+            Self::File(Some(path)) => {
                 log::debug!("Reading from file: {:?}", path);
                 serde_json::from_reader(
                     std::fs::File::open(path).map_err(|err| io_error_to_string(&err, path))?,
                 )?
+            }
+            Self::File(None) => {
+                log::debug!("Reading from stdin");
+                serde_json::from_reader(std::io::stdin())?
             }
         };
         log::debug!("Got: {:?}", response);
