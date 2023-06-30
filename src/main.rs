@@ -3,14 +3,28 @@ use std::{error::Error, io::Write, path::PathBuf, process::ExitCode};
 use clap::{Parser as ClapParser, ValueEnum};
 use git_version::git_version;
 
-use postgang::bring_client::mailbox_delivery_dates::{
-    ApiResponse, ApiResponseWithPostalCode, DeliveryDate,
-};
+use postgang::bring_client::mailbox_delivery_dates::{ApiResponse, DeliveryDate};
 use postgang::{
     bring_client::{mailbox_delivery_dates::DeliveryDays, ApiKey, ApiUid, NorwegianPostalCode},
     calendar::Calendar,
     io_error_to_string,
 };
+
+pub struct ApiResponseWithPostalCode {
+    pub response: ApiResponse,
+    pub postal_code: NorwegianPostalCode,
+}
+
+impl From<ApiResponseWithPostalCode> for Vec<DeliveryDate> {
+    fn from(value: ApiResponseWithPostalCode) -> Self {
+        value
+            .response
+            .delivery_dates
+            .iter()
+            .map(|date| DeliveryDate::new(value.postal_code, *date))
+            .collect()
+    }
+}
 
 const VERSION: &str = git_version!(
     prefix = "git:",

@@ -33,23 +33,7 @@ impl DeliveryDate {
 #[derive(Serialize, Deserialize, Debug)]
 /// Represents JSON structure from the API.
 pub struct ApiResponse {
-    delivery_dates: Vec<NaiveDate>,
-}
-
-pub struct ApiResponseWithPostalCode {
-    pub response: ApiResponse,
-    pub postal_code: NorwegianPostalCode,
-}
-
-impl From<ApiResponseWithPostalCode> for Vec<DeliveryDate> {
-    fn from(value: ApiResponseWithPostalCode) -> Self {
-        value
-            .response
-            .delivery_dates
-            .iter()
-            .map(|date| DeliveryDate::new(value.postal_code, *date))
-            .collect()
-    }
+    pub delivery_dates: Vec<NaiveDate>,
 }
 
 /// Delivery day provider.
