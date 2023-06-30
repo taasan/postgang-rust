@@ -16,6 +16,7 @@ Commands:
 Options:
       --code <CODE>      Postal code
       --output <OUTPUT>  File path, print to stdout if omitted
+      --format <FORMAT>  Output format [default: ical] [possible values: ical, json]
   -h, --help             Print help
   -V, --version          Print version
 ```

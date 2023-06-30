@@ -1,8 +1,11 @@
 use std::{error::Error, io::Write, path::PathBuf, process::ExitCode};
 
-use clap::Parser as ClapParser;
+use clap::{Parser as ClapParser, ValueEnum};
 use git_version::git_version;
 
+use postgang::bring_client::mailbox_delivery_dates::{
+    ApiResponse, ApiResponseWithPostalCode, DeliveryDate,
+};
 use postgang::{
     bring_client::{mailbox_delivery_dates::DeliveryDays, ApiKey, ApiUid, NorwegianPostalCode},
     calendar::Calendar,
@@ -43,6 +46,12 @@ enum Commands {
     },
 }
 
+#[derive(Debug, Clone, ValueEnum)]
+enum OutputFormat {
+    Ical,
+    Json,
+}
+
 #[derive(ClapParser, Debug)]
 #[clap(version = VERSION)]
 struct Cli {
@@ -54,6 +63,9 @@ struct Cli {
     #[arg(long)]
     /// File path, print to stdout if omitted
     output: Option<PathBuf>,
+    /// Output format
+    #[arg(value_enum, long, default_value_t = OutputFormat::Ical)]
+    format: OutputFormat,
 }
 
 async fn try_main() -> Result<(), Box<dyn Error>> {
@@ -63,18 +75,32 @@ async fn try_main() -> Result<(), Box<dyn Error>> {
         Commands::Api { api_key, api_uid } => DeliveryDays::api(api_key, api_uid),
         Commands::File { input } => DeliveryDays::file(input),
     };
+    let output = match cli.format {
+        OutputFormat::Ical => {
+            let response: ApiResponse = endpoint.get(cli.code).await?;
+            log::debug!("Got: {:?}", response);
+            let delivery_dates: Vec<DeliveryDate> = ApiResponseWithPostalCode {
+                response,
+                postal_code: cli.code,
+            }
+            .into();
+            let cal: Calendar = delivery_dates.into();
+            format!("{cal}")
+        }
+        OutputFormat::Json => {
+            let response: serde_json::Value = endpoint.get(cli.code).await?;
+            log::debug!("Got: {:?}", response);
+            serde_json::to_string(&response)?
+        }
+    };
     match cli.output {
         Some(path) => {
             // Try to create file before we do any network requests
             let mut file =
                 std::fs::File::create(&path).map_err(|err| io_error_to_string(&err, &path))?;
-            let cal: Calendar = endpoint.get(cli.code).await?.into();
-            write!(file, "{cal}").map_err(|err| io_error_to_string(&err, &path))?;
+            write!(file, "{output}").map_err(|err| io_error_to_string(&err, &path))?;
         }
-        None => {
-            let cal: Calendar = endpoint.get(cli.code).await?.into();
-            std::io::stdout().write_fmt(format_args!("{cal}"))?
-        }
+        None => std::io::stdout().write_fmt(format_args!("{output}"))?,
     }
 
     Ok(())

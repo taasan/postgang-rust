@@ -8,7 +8,8 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client,
 };
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     bring_client::{ApiKey, ApiUid, NorwegianPostalCode, NORWAY},
@@ -29,15 +30,15 @@ impl DeliveryDate {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 /// Represents JSON structure from the API.
-struct ApiResponse {
+pub struct ApiResponse {
     delivery_dates: Vec<NaiveDate>,
 }
 
-struct ApiResponseWithPostalCode {
-    response: ApiResponse,
-    postal_code: NorwegianPostalCode,
+pub struct ApiResponseWithPostalCode {
+    pub response: ApiResponse,
+    pub postal_code: NorwegianPostalCode,
 }
 
 impl From<ApiResponseWithPostalCode> for Vec<DeliveryDate> {
@@ -82,11 +83,11 @@ impl DeliveryDays {
 
     /// Get a list of delivery dates.
     #[allow(clippy::missing_errors_doc)]
-    pub async fn get(
+    pub async fn get<T: DeserializeOwned>(
         &self,
         postal_code: NorwegianPostalCode,
-    ) -> Result<Vec<DeliveryDate>, Box<dyn std::error::Error>> {
-        let response: ApiResponse = match self {
+    ) -> Result<T, Box<dyn std::error::Error>> {
+        let response: T = match self {
             Self::Api(client) => {
                 let url = format!(
                     "https://api.bring.com/address/api/{NORWAY}/postal-codes/{postal_code}/mailbox-delivery-dates"
@@ -96,7 +97,7 @@ impl DeliveryDays {
                 log::debug!("Got response status: {}", resp.status());
                 log::trace!("{:?}", resp);
                 resp.error_for_status_ref()?;
-                resp.json::<ApiResponse>().await?
+                resp.json().await?
             }
             Self::File(Some(path)) => {
                 log::debug!("Reading from file: {:?}", path);
@@ -109,11 +110,6 @@ impl DeliveryDays {
                 serde_json::from_reader(std::io::stdin())?
             }
         };
-        log::debug!("Got: {:?}", response);
-        Ok(ApiResponseWithPostalCode {
-            response,
-            postal_code,
-        }
-        .into())
+        Ok(response)
     }
 }
