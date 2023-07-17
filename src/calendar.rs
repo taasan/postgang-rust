@@ -9,7 +9,7 @@ use chrono::{
 
 use crate::bring_client::mailbox_delivery_dates::DeliveryDate;
 
-use self::content_line::{CalendarIterator, ContentLine};
+use self::content_line::ContentLine;
 
 #[inline]
 fn format_naive_date<'a>(date: NaiveDate) -> DelayedFormat<StrftimeItems<'a>> {
@@ -40,8 +40,8 @@ pub struct Calendar {
 }
 
 impl Calendar {
-    fn content_lines(&self) -> impl Iterator<Item = ContentLine> {
-        CalendarIterator::new(self.clone())
+    fn content_lines(&self) -> Vec<ContentLine> {
+        self.into()
     }
 }
 
@@ -159,194 +159,52 @@ mod content_line {
     }
 
     #[derive(Debug)]
-    enum PreambleState {
-        Begin,
-        Version,
-        ProdId,
-        CalScale,
-        Method,
-    }
-
-    #[derive(Debug)]
-    enum CalendarIteratorState {
-        Preamble(PreambleState),
-        StartEvent(u8),
-        Event(u8, DeliveryDateIterator),
-        Done,
-    }
-
-    #[derive(Debug)]
-    pub(super) struct CalendarIterator {
-        calendar: Calendar,
-        state: CalendarIteratorState,
-    }
-
-    impl CalendarIterator {
-        #[inline]
-        pub fn new(calendar: Calendar) -> Self {
-            Self {
-                calendar,
-                state: CalendarIteratorState::Preamble(PreambleState::Begin),
-            }
-        }
-    }
-    impl Iterator for CalendarIterator {
-        type Item = ContentLine;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            log::trace!("{:?}", self.state);
-            let (res, next_state) = match &mut self.state {
-                CalendarIteratorState::Preamble(x) => match x {
-                    PreambleState::Begin => {
-                        *x = PreambleState::Version;
-                        (Some("BEGIN:VCALENDAR".into()), None)
-                    }
-                    PreambleState::Version => {
-                        *x = PreambleState::ProdId;
-                        (Some("VERSION:2.0".into()), None)
-                    }
-                    PreambleState::ProdId => {
-                        *x = PreambleState::CalScale;
-                        (Some("PRODID:-//Aasan//Aasan Postgang//EN".into()), None)
-                    }
-                    PreambleState::CalScale => {
-                        *x = PreambleState::Method;
-                        (Some("CALSCALE:GREGORIAN".into()), None)
-                    }
-                    PreambleState::Method => (
-                        Some("METHOD:PUBLISH".into()),
-                        Some(CalendarIteratorState::StartEvent(0)),
-                    ),
-                },
-                CalendarIteratorState::StartEvent(index) => {
-                    if let Some(mut iterator) = self
-                        .calendar
-                        .delivery_dates
-                        .get(usize::from(*index))
-                        .map(|x| DeliveryDateIterator::new(*x, self.calendar.created))
-                    {
-                        (
-                            iterator.next(),
-                            Some(CalendarIteratorState::Event(*index, iterator)),
-                        )
-                    } else {
-                        (
-                            Some("END:VCALENDAR".into()),
-                            Some(CalendarIteratorState::Done),
-                        )
-                    }
-                }
-                CalendarIteratorState::Event(index, iterator) => match iterator.next() {
-                    None => (
-                        Some("".into()),
-                        Some(CalendarIteratorState::StartEvent(*index + 1)),
-                    ),
-                    x => (x, None),
-                },
-                CalendarIteratorState::Done => (None, None),
-            };
-            if let Some(s) = next_state {
-                self.state = s;
-            };
-            res
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    enum DeliveryDateIteratorState {
-        Begin,
-        DtEnd,
-        DtStamp,
-        DtStart,
-        Summary,
-        Transp,
-        Uid,
-        Url,
-        End,
-        Done,
-    }
-
-    impl DeliveryDateIteratorState {
-        fn next(self) -> Option<Self> {
-            use DeliveryDateIteratorState::{
-                Begin, Done, DtEnd, DtStamp, DtStart, End, Summary, Transp, Uid, Url,
-            };
-            match self {
-                Begin => Some(DtEnd),
-                DtEnd => Some(DtStamp),
-                DtStamp => Some(DtStart),
-                DtStart => Some(Summary),
-                Summary => Some(Transp),
-                Transp => Some(Uid),
-                Uid => Some(Url),
-                Url => Some(End),
-                End => Some(Done),
-                Done => None,
-            }
-        }
-    }
-
-    #[derive(Debug)]
-    struct DeliveryDateIterator {
+    struct DeliveryDateEntry {
         delivery_date: DeliveryDate,
         created: Option<DateTime<Utc>>,
-        state: DeliveryDateIteratorState,
     }
 
-    impl DeliveryDateIterator {
-        #[inline]
-        pub fn new(delivery_date: DeliveryDate, created: Option<DateTime<Utc>>) -> Self {
-            Self {
-                delivery_date,
-                created,
-                state: DeliveryDateIteratorState::Begin,
-            }
+    impl From<&DeliveryDateEntry> for Vec<ContentLine> {
+        fn from(value: &DeliveryDateEntry) -> Self {
+            let date = value.delivery_date.date;
+            let dt_end = format_naive_date(date + Duration::days(1));
+            let timestamp = format_timestamp(&(value.created.unwrap_or(Utc::now())));
+            let dt_start = format_naive_date(date);
+            let postal_code = value.delivery_date.postal_code;
+            let weekday = weekday(value.delivery_date.date);
+            let day = value.delivery_date.date.day();
+            vec![
+                "BEGIN:VEVENT".into(),
+                format!("DTEND;VALUE=DATE:{dt_end}").into(),
+                format!("DTSTAMP:{timestamp}").into(),
+                format!("DTSTART;VALUE=DATE:{dt_start}").into(),
+                format!("SUMMARY:{postal_code}: Posten kommer {weekday} {day}.").into(),
+                "TRANSP:TRANSPARENT".into(),
+                format!("UID:postgang-{postal_code}-{date}").into(),
+                "URL:https://www.posten.no/levering-av-post/".into(),
+                "END:VEVENT".into(),
+            ]
         }
     }
 
-    impl Iterator for DeliveryDateIterator {
-        type Item = ContentLine;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            use DeliveryDateIteratorState::{
-                Begin, Done, DtEnd, DtStamp, DtStart, End, Summary, Transp, Uid, Url,
-            };
-            let res = match self.state {
-                Begin => Some("BEGIN:VEVENT".into()),
-                DtEnd => {
-                    let dt_end = format_naive_date(self.delivery_date.date + Duration::days(1));
-                    Some(format!("DTEND;VALUE=DATE:{dt_end}").into())
-                }
-                DtStamp => {
-                    let timestamp = format_timestamp(&(self.created.unwrap_or(Utc::now())));
-                    Some(format!("DTSTAMP:{timestamp}").into())
-                }
-                DtStart => {
-                    let dt_start = format_naive_date(self.delivery_date.date);
-                    Some(format!("DTSTART;VALUE=DATE:{dt_start}").into())
-                }
-                Summary => {
-                    let postal_code = self.delivery_date.postal_code;
-                    let weekday = weekday(self.delivery_date.date);
-                    let day = self.delivery_date.date.day();
-                    Some(format!("SUMMARY:{postal_code}: Posten kommer {weekday} {day}.").into())
-                }
-                Transp => Some("TRANSP:TRANSPARENT".into()),
-                Uid => {
-                    let date = self.delivery_date.date;
-                    let postal_code = self.delivery_date.postal_code;
-                    Some(format!("UID:postgang-{postal_code}-{date}").into())
-                }
-                Url => Some("URL:https://www.posten.no/levering-av-post/".into()),
-                End => Some("END:VEVENT".into()),
-                Done => None,
-            };
-            if res.is_some() {
-                let state = self.state.clone();
-                if let Some(s) = state.next() {
-                    self.state = s;
-                }
+    impl From<&Calendar> for Vec<ContentLine> {
+        fn from(value: &Calendar) -> Self {
+            let mut res: Vec<ContentLine> = vec![
+                "BEGIN:VCALENDAR".into(),
+                "VERSION:2.0".into(),
+                "PRODID:-//Aasan//Aasan Postgang//EN".into(),
+                "CALSCALE:GREGORIAN".into(),
+                "METHOD:PUBLISH".into(),
+            ];
+            for x in &value.delivery_dates {
+                let vvv = DeliveryDateEntry {
+                    delivery_date: *x,
+                    created: value.created,
+                };
+                let mut xs: Vec<ContentLine> = (&vvv).into();
+                res.append(&mut xs);
             }
+            res.push("END:VCALENDAR".into());
             res
         }
     }
