@@ -196,14 +196,14 @@ mod content_line {
                 "CALSCALE:GREGORIAN".into(),
                 "METHOD:PUBLISH".into(),
             ];
-            for x in &value.delivery_dates {
-                let vvv = DeliveryDateEntry {
+            res.extend(value.delivery_dates.iter().flat_map(|x| {
+                let xs: Vec<ContentLine> = (&DeliveryDateEntry {
                     delivery_date: *x,
                     created: value.created,
-                };
-                let mut xs: Vec<ContentLine> = (&vvv).into();
-                res.append(&mut xs);
-            }
+                })
+                    .into();
+                xs
+            }));
             res.push("END:VCALENDAR".into());
             res
         }
