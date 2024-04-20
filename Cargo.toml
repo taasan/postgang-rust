@@ -27,3 +27,21 @@ strip = true  # Automatically strip symbols from the binary.
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[lints.rust]
+warnings = "deny"
+unsafe_code = "deny"
+unused = "deny"
+nonstandard-style = "deny"
+future-incompatible = "deny"
+rust-2024-compatibility = "deny"
+
+[lints.clippy]
+std_instead_of_core = "deny"
+std_instead_of_alloc = "deny"
+alloc_instead_of_core = "deny"
+complexity = "deny"
+pedantic = "deny"
+missing_const_for_fn = "deny"
+use_self = "deny"
+or_fun_call = "deny"

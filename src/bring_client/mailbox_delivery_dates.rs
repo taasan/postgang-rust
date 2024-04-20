@@ -25,7 +25,7 @@ pub struct DeliveryDate {
 
 impl DeliveryDate {
     #[must_use]
-    pub fn new(postal_code: NorwegianPostalCode, date: NaiveDate) -> Self {
+    pub const fn new(postal_code: NorwegianPostalCode, date: NaiveDate) -> Self {
         Self { postal_code, date }
     }
 }
@@ -61,7 +61,7 @@ impl DeliveryDays {
 
     #[must_use]
     /// Read dates from file.
-    pub fn file(path: Option<PathBuf>) -> Self {
+    pub const fn file(path: Option<PathBuf>) -> Self {
         Self::File(path)
     }
 

@@ -37,11 +37,11 @@ fn postal_code_parser(value: &str) -> Result<NorwegianPostalCode, String> {
 }
 
 fn parse_api_key(value: &str) -> Result<ApiKey, String> {
-    ApiKey::try_from(value).map_err(|err| format!("{:?}", err))
+    ApiKey::try_from(value).map_err(|err| format!("{err:?}"))
 }
 
 fn parse_api_uid(value: &str) -> Result<ApiUid, String> {
-    ApiUid::try_from(value).map_err(|err| format!("{:?}", err))
+    ApiUid::try_from(value).map_err(|err| format!("{err:?}"))
 }
 
 #[derive(ClapParser, Debug)]
@@ -125,7 +125,7 @@ async fn main() -> ExitCode {
     env_logger::init();
 
     match try_main().await {
-        Ok(_) => ExitCode::SUCCESS,
+        Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             log::error!("{err}");
             ExitCode::FAILURE

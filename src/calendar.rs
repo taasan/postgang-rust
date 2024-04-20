@@ -128,13 +128,13 @@ mod content_line {
 
     impl From<&str> for ContentLine {
         fn from(x: &str) -> Self {
-            ContentLine(x.to_string())
+            Self(x.to_string())
         }
     }
 
     impl From<String> for ContentLine {
         fn from(x: String) -> Self {
-            ContentLine(x)
+            Self(x)
         }
     }
 
@@ -168,7 +168,7 @@ mod content_line {
         fn from(value: &DeliveryDateEntry) -> Self {
             let date = value.delivery_date.date;
             let dt_end = format_naive_date(date + Duration::days(1));
-            let timestamp = format_timestamp(&(value.created.unwrap_or(Utc::now())));
+            let timestamp = format_timestamp(&(value.created.unwrap_or_else(Utc::now)));
             let dt_start = format_naive_date(date);
             let postal_code = value.delivery_date.postal_code;
             let weekday = weekday(value.delivery_date.date);
@@ -189,7 +189,7 @@ mod content_line {
 
     impl From<&Calendar> for Vec<ContentLine> {
         fn from(value: &Calendar) -> Self {
-            let mut res: Vec<ContentLine> = vec![
+            let mut res: Self = vec![
                 "BEGIN:VCALENDAR".into(),
                 "VERSION:2.0".into(),
                 "PRODID:-//Aasan//Aasan Postgang//EN".into(),
@@ -197,7 +197,7 @@ mod content_line {
                 "METHOD:PUBLISH".into(),
             ];
             res.extend(value.delivery_dates.iter().flat_map(|x| {
-                let xs: Vec<ContentLine> = (&DeliveryDateEntry {
+                let xs: Self = (&DeliveryDateEntry {
                     delivery_date: *x,
                     created: value.created,
                 })
@@ -239,7 +239,7 @@ mod content_line {
         let line = ContentLine::from(
             "123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 ",
         );
-        assert_eq!(format!("{line}"), String::from("123456789 123456789 123456789 123456789 123456789 123456789 123456789 12345\r\n 6789 \r\n"))
+        assert_eq!(format!("{line}"), String::from("123456789 123456789 123456789 123456789 123456789 123456789 123456789 12345\r\n 6789 \r\n"));
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod content_line {
             String::from(
                 "123456789 123456789 123456789 123456789 123456789 123456789 123456789 12345\r\n"
             )
-        )
+        );
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod content_line {
         assert_eq!(
             format!("{line}"),
             String::from("A☣️☣️☣️☣️☣️☣️☣️☣️☣️☣️☣️☣️\r\n ☣️☣️☣️☣️☣️☣️\r\n")
-        )
+        );
     }
 
     #[test]
