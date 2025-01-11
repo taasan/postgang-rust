@@ -1,4 +1,5 @@
-use std::{error::Error, io::Write, path::PathBuf, process::ExitCode};
+use core::error::Error;
+use std::{io::Write, path::PathBuf, process::ExitCode};
 
 use clap::{Parser as ClapParser, ValueEnum};
 use git_version::git_version;

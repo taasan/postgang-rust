@@ -53,7 +53,7 @@ impl From<Vec<DeliveryDate>> for Calendar {
 
 impl Calendar {
     #[must_use]
-    pub fn new(delivery_dates: Vec<DeliveryDate>, created: Option<DateTime<Utc>>) -> Self {
+    pub const fn new(delivery_dates: Vec<DeliveryDate>, created: Option<DateTime<Utc>>) -> Self {
         Self {
             delivery_dates,
             created,

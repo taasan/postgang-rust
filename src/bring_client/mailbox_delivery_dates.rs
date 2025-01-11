@@ -70,7 +70,7 @@ impl DeliveryDays {
     pub async fn get<T: DeserializeOwned>(
         &self,
         postal_code: NorwegianPostalCode,
-    ) -> Result<T, Box<dyn std::error::Error>> {
+    ) -> Result<T, Box<dyn core::error::Error>> {
         let response: T = match self {
             Self::Api(client) => {
                 let url = format!(
